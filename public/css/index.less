@@ -1,0 +1,243 @@
+@import "base";
+a, a:hover, a:active {
+    text-decoration: none;
+    color: #333;
+}
+a:hover {
+    color: #337ab7;
+    text-decoration: none
+}
+.left {
+    float: left;
+    width: 180px;
+    height: 100%;
+    position: relative;
+    padding: 10px 0 0 10px;
+    border-right: 1px solid #d6d6d6;
+    background-color: #f4f6fb;
+    overflow-y: auto;
+    overflow-x: hidden
+}
+
+.right {
+    width: auto;
+    height: 100%;
+    overflow-x: auto !important;
+    position: relative;
+}
+
+.photo {
+    margin-right: 5px
+}
+
+.state {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: #e3e3e4;
+    background-color: #14d212;
+    margin: 13px 13px 0 0
+}
+
+.fr {
+    float: right
+}
+
+.userList li {
+    margin-bottom: 1rem
+}
+
+.content {
+    padding: 10px;
+    box-sizing: border-box;
+    overflow-y: auto
+}
+.content-photo {
+    float: left
+}
+
+.dialogue-content {
+    display: inline-block;
+    vertical-align: top
+}
+
+.bubble {
+    border: 1px solid #efefef;
+    padding: 5px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    background-color: #eeeeff;
+    position: relative
+}
+
+.who {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #666
+}
+
+.tail {
+    width: 7px;
+    height: 12px;
+    background: url("../images/tail.png");
+    position: absolute;
+    left: -5px;
+    top: 10px
+}
+
+.dialogue-user {
+    display: inline-block;
+    margin-right: 5px;
+    text-align: center
+}
+
+.me {
+    text-align: right
+}
+
+.me .dialogue-user {
+    float: right
+}
+
+.me .dialogue-user {
+    margin-left: 10px;
+    margin-right: 0
+}
+
+.me .tail {
+    left: auto;
+    right: -5px;
+    background-position: -6px 0
+}
+
+.input-wrap {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 200px;
+    border-top: 1px solid #d6d6d6;
+    width: 100%;
+    background-color: #fff
+}
+
+.tool {
+    padding: 5px 0
+}
+
+.tool a {
+    margin-left: 10px
+}
+
+.submit {
+    width: 70px;
+    height: 30px;
+    border: 1px solid #d6d6d6;
+    background: #f4f6fb;
+    line-height: 30px;
+    text-align: center;
+    position: absolute;
+    bottom:20px;
+    right: 30px;
+    cursor: pointer
+}
+
+.input {
+    width: 100%;
+    height: 170px;
+    overflow-y:auto;
+    overflow-x: hidden;
+    border: none;
+    outline: none
+}
+
+body .display-none {
+    display: none
+}
+
+.messages li {
+    margin: 10px 0
+}
+
+.showHistory-wrap {
+    position: absolute;
+    left: 38px;
+    bottom: 20px
+}
+
+.messages img {
+    max-width: 95%
+}
+
+.faceContent {
+    width: 300px;
+    height: 180px;
+    position: absolute;
+    top: -180px;
+    left: 0;
+    border: 1px solid #eee;
+    background-color: #fefefe;
+    overflow-y: auto;
+    //display: none
+}
+
+.faceContent li {
+    margin: 5px;
+    float: left;
+    cursor: pointer
+}
+.toolbar{
+    height: 46px;
+    background-color: #fff;
+    text-align: right;
+}
+.toolbar-meeting{
+    height: 70px;
+    margin:10px 0 15px;
+}
+.toolbar-btn,a.toolbar-btn{
+    height: 26px;
+    border-radius: 3px;
+    line-height: 26px;
+    display: inline-block;
+    padding:0 8px;
+    font-size:12px;
+    color:#fff;
+    vertical-align: middle;
+    margin:12px 20px 0 0;
+}
+.dialog-btn{
+    .toolbar-btn;
+    box-sizing: border-box;
+    padding:0 27px;
+}
+.dialog-btn:hover ,.toolbar-btn:hover{
+    color:#fff;
+}
+.green-btn{
+    background-color:#46a549;
+}
+.orange-btn{
+    background-color:#fe7800;
+}
+.red-btn{
+    background-color:#f33b18;
+}
+.yellow-btn{
+    background-color:#46a549;
+}
+.gray-btn{
+    background-color:#aaaaaa;
+}
+.btn-margin{
+    margin-left: -15px;
+}
+.dialog-footer{
+    text-align: center;
+}
+.dialogue-img-wrap{
+    max-width: 100%;
+}
+.message li{
+    margin-bottom: 10px;
+}
