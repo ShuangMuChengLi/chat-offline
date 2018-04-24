@@ -16,9 +16,19 @@ a:hover {
     border-right: 1px solid #d6d6d6;
     background-color: #f4f6fb;
     overflow-y: auto;
-    overflow-x: hidden
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
-
+.left-title{
+    font-size: 18px;
+    margin-bottom:10px;
+}
+.user-list{
+    cursor: pointer;
+}
+.current-dialog{
+    background: #cbc;
+}
 .right {
     width: auto;
     height: 100%;
@@ -30,13 +40,18 @@ a:hover {
     margin-right: 5px
 }
 
+.state.active {
+    border: #14d212;
+    background-color: #14d212;
+}
 .state {
     width: 10px;
     height: 10px;
     border-radius: 50%;
     border: #e3e3e4;
-    background-color: #14d212;
-    margin: 13px 13px 0 0
+    background-color: #e3e3e4;
+    margin: 13px 13px 0 0;
+    float:right;
 }
 
 .fr {
@@ -240,4 +255,8 @@ body .display-none {
 }
 .message li{
     margin-bottom: 10px;
+}
+.left{
+    width: 180px;
+    float: left;
 }

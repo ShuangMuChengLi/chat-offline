@@ -9,6 +9,7 @@ const log = log4js.getLogger("app");
 
 const getData = require("./routes/getData");
 const apiTest = require("./routes/api-test");
+const User = require("./routes/User");
 const upload = require("./routes/upload");
 
 const app = express();
@@ -50,6 +51,7 @@ app.use(express.static(path.join(__dirname, "uploads")));
 
 app.use("/json", getData);
 app.use("/api", apiTest);
+app.use("/user", User);
 app.use("/upload", upload);
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

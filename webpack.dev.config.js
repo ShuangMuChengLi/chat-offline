@@ -9,9 +9,7 @@ const postcssConfig = require("./postcss.config");
 const ExtractTextPlugin = require("extract-text-webpack-plugin");
 const extractLESS = new ExtractTextPlugin("stylesheets/[name].less.css");
 const extractCSS = new ExtractTextPlugin("stylesheets/[name].css");
-Object.keys(commonConfig.entry).forEach(function (name) {
-    commonConfig.entry[name] = ["./dev-client"].concat(commonConfig.entry[name]);
-});
+
 module.exports  =  webpackMerge(commonConfig, {
     // entry: {
     //   vendor:['vue/dist/vue.common.js','vue-resource','vue-router',
@@ -43,7 +41,6 @@ module.exports  =  webpackMerge(commonConfig, {
         filename: "[name].bundle.js"
     },
     plugins: [
-        new webpack.HotModuleReplacementPlugin(),
         extractCSS,
         extractLESS
     // new webpack.NoErrorsPlugin()

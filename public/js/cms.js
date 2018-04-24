@@ -2,7 +2,7 @@
  * Created by lin on 2017/4/17.
  */
 require("./../css/base.less");
-require("element-ui/lib/theme-default/index.css");
+import 'element-ui/lib/theme-chalk/index.css';
 import Vue from "vue";
 import vue_resource from "vue-resource";
 import ElementUI from "element-ui";

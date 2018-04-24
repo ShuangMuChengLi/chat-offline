@@ -6,7 +6,7 @@
     "start": "node ./bin/www",
     "build": "webpack  --progress --profile --colors --config webpack.prod.config.js",
     "start:dev": "webpack-dev-server --progress --config webpack.dev.config.js",
-    "watch": "webpack --progress --colors --watch  --config webpack.watch.config.js"
+    "watch": "webpack --progress --colors --watch  --config webpack.dev.config.js"
   },
   "dependencies": {
     "body-parser": "~1.16.0",
@@ -17,10 +17,11 @@
     "core-decorators": "^0.19.0",
     "debug": "~2.6.0",
     "ejs": "~2.5.5",
-    "element-ui": "^1.2.8",
+    "element-ui": "^2.3.4",
     "express": "~4.14.1",
     "express-session": "^1.15.2",
     "formidable": "^1.1.1",
+    "html5-storage": "^1.0.3",
     "lodash": "^4.17.4",
     "log4js": "^1.1.1",
     "matchdep": "^1.0.1",
@@ -80,8 +81,6 @@
     "vue-style-loader": "^2.0.0",
     "webpack": "^2.6.1",
     "webpack-dev-middleware": "^2.0.6",
-    "webpack-dev-server": "^2.4.1",
-    "webpack-hot-middleware": "^2.18.0",
     "webpack-md5-hash": "0.0.5",
     "webpack-merge": "^2.6.1"
   }

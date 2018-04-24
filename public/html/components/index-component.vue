@@ -1,50 +1,79 @@
 <template>
-    <div class="wrapper" :style="{height:style.iWindowHeight + 'px'}">
-        <div class="right" id="right">
-            <div class="content" id="messagesWrap" ref="messagesWrap" :style="{height:style.iWindowHeight - 201 + 'px'}">
-                <ul ref="messages" class="message">
-                    <li v-for="item in msgList"
-                        :class="{'sys-info':item.type === 'system' ,
+    <div class="wrapper">
+        <div :style="{height:style.iWindowHeight + 'px'}">
+            <div class="left" :style="{height:style.iWindowHeight + 'px'}">
+                <h1>用户：{{userInfo.name}}</h1>
+                <div>
+                    <ul class="user-list">
+                        <li v-for="item in users" >
+                            <h2 class="left-title" @click="changeRoom('depart' ,item.id)"  :class="{'current-dialog':currentDialog.id === item.id}">{{item.name}}</h2>
+                            <ul class="userList" id="userList">
+                                <li v-for="user in item.members"
+                                    v-if="user.id !== userId"
+                                    @click="changeRoom('user' ,user.id)"
+                                    :class="{'current-dialog':currentDialog.id === user.id}">
+                                    <el-badge :value="1" class="item">
+                                        <img src="../../images/user.png" class="photo"/>
+                                    </el-badge>
+                                    <span>{{user.name}}</span>
+                                    <div class="state" :class="{active:user.active}">
+                                    </div>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                    <!--<div>-->
+                    <!--<el-button>默认按钮</el-button>-->
+                    <!--</div>-->
+                </div>
+            </div>
+            <div class="right" id="right">
+                <div class="content" id="messagesWrap" ref="messagesWrap"
+                     :style="{height:style.iWindowHeight - 201 + 'px'}">
+                    <ul ref="messages" class="message">
+                        <li v-for="item in currentDialog.msgList"
+                            :class="{'sys-info':item.type === 'system' ,
                                 'clearfix':item.type === 'msg',
                                 'me':item.type === 'msg' && item.userId === userId}">
-                        <template v-if="item.type === 'system'">
-                            <span class="info">系统提示：</span>{{item.msg}}
-                        </template>
-                        <template v-if="item.type === 'msg'">
-                            <div class="dialogue-user"><img src="images/user.png">
-                                <div class="who">{{item.name}}</div>
-                            </div>
-                            <div class="dialogue-content">
-                                <div class="bubble">
-                                    <div v-html="item.msg"></div>
-                                    <div class="tail"></div>
+                            <template v-if="item.type === 'system'">
+                                <span class="info">系统提示：</span>{{item.msg}}
+                            </template>
+                            <template v-if="item.type === 'msg'">
+                                <div class="dialogue-user"><img src="images/user.png">
+                                    <div class="who">{{item.name}}</div>
                                 </div>
-                            </div>
-                        </template>
-                    </li>
-                </ul>
-            </div>
-            <div class="input-wrap ">
-                <div class="faceContent" v-show="faceListVisible">
-                    <ul class="clearfix">
-                        <li v-for="item in 104" @click="faceSelect(item)">
-                            <img :src="'images/face/faceIcon/' + item + '.png'">
+                                <div class="dialogue-content">
+                                    <div class="bubble">
+                                        <div v-html="item.msg"></div>
+                                        <div class="tail"></div>
+                                    </div>
+                                </div>
+                            </template>
                         </li>
                     </ul>
                 </div>
-                <div class="tool">
-                    <a href="javascript:void(0)" id="faceIcon" @click="faceListVisible = !faceListVisible">
-                        <img src="images/face.png">
-                    </a>
-                    <a href="javascript:void(0)"  @click="dialogVisible = !dialogVisible">
-                        <img src="images/img.png">
-                    </a>
+                <div class="input-wrap ">
+                    <div class="faceContent" v-show="faceListVisible">
+                        <ul class="clearfix">
+                            <li v-for="item in 104" @click="faceSelect(item)">
+                                <img :src="'images/face/faceIcon/' + item + '.png'">
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="tool">
+                        <a href="javascript:void(0)" id="faceIcon" @click="faceListVisible = !faceListVisible">
+                            <img src="images/face.png">
+                        </a>
+                        <a href="javascript:void(0)" @click="dialogVisible = !dialogVisible">
+                            <img src="images/img.png">
+                        </a>
+                    </div>
+                    <div contenteditable="true" class="input" v-html="inputMsg" ref="editor"></div>
+                    <div class="submit" @click="submitMsg">发送</div>
                 </div>
-                <div contenteditable="true" class="input" v-html="inputMsg" ref="editor">  </div>
-                <div class="submit" @click="submitMsg">发送</div>
             </div>
         </div>
-        <el-dialog title="上传" v-model="dialogVisible" class="file-dialog" size="tiny">
+        <el-dialog title="上传"  :visible.sync="dialogVisible" class="file-dialog" size="tiny">
             <el-upload
                 class="upload-demo"
                 action="/upload"
@@ -71,61 +100,165 @@
 
 <script>
     import io from "socket.io-client";
-    const queryString  = require("query-string");
-    const util  = require("../../js/util/util");
-    const conf  = require("../../config/conf");
+
+    const queryString = require("query-string");
+    const util = require("../../js/util/util");
+    const conf = require("../../config/conf");
     export default {
-        data () {
+        data() {
             return {
-                loading:false,
-                dialogVisible:false,
-                faceListVisible:false,
-                inputMsg:"",
-                roomId:"",
-                userId:"",
+                loading: false,
+                dialogVisible: false,
+                faceListVisible: false,
+                inputMsg: "",
+                roomId: "",
+                targetId:"",
+                targetId:"",
+                userId: "",
                 style: {
                     iWindowHeight: 0,
                 },
-                msgList:[
-                ],
-                socket:{},
-                fileList:[],
+                currentDialog: {
+                    id:"",
+                    msgList:[]
+                },
+                allMsgList:null,
+                socket: {},
+                fileList: [],
+                users: [],
             };
         },
         watch: {},
+        computed:{
+            userInfo(){
+                for(let key in this.userList){
+                    let item = this.userList[key];
+                    if(item.id === this.userId){
+                        return item;
+                    }
+                }
+                return {};
+            },
+            userList() {
+                let userList = {};
+                for(let item of this.users){
+                    for(let subItem of item.members){
+                        userList[subItem.id] = subItem;
+                    }
+                }
+                return userList;
+            }
+        },
         created: function () {
         },
         mounted: function () {
-            this.roomId = this.$route.params.roomId;
-            this.userId = this.$route.params.userId;
-            this.initStyle();
-            this.initSocket();
-            document.addEventListener("keydown",this.keydownEnter);
+            this.init();
         },
         methods: {
+            // 初始化socket
+            initSocket() {
+                let $refMessageList = this.$refs.messages;
+                let $refMessagesWrap = this.$refs.messagesWrap;
+                let search = queryString.stringify({
+                    userId: this.userId,
+//                    roomId: this.roomId
+                });
+                let url = window.location.origin + "?" + search;
+                this.socket = io(url);
+                this.socket.on("updateUser", (users) => {
+                    this.users = users;
+                    if(!this.allMsgList){
+                        this.allMsgList = {};
+                        for(let dept of this.users){
+                            this.allMsgList[dept.id] = [];
+                        }
+                    }
+                });
+                this.socket.on("message", (data) => {
+                    console.log(data,data.userId , this.userId);
+                    if(data.targetType === "depart"){
+                        this.allMsgList[data.target].push(data);
+                    }else{
+                        if(data.userId === this.userId){
+                            this.allMsgList[data.target].push(data);
+                        }else{
+                            if(!this.allMsgList[data.userId]){
+                                this.allMsgList[data.userId] = [];
+                            }
+                            this.allMsgList[data.userId].push(data);
+                        }
+                    }
+
+                    // 滚动到底部
+                    setTimeout(() => {
+                        $refMessagesWrap.scrollTop = $refMessageList.scrollHeight;
+                    }, 100);
+                });
+            },
+            changeRoom(type, id) {
+                this.targetId = id;
+                if(type !== "depart"){
+                    this.socket.emit("createRoom", {
+                        target: id
+                    });
+                    this.targetType = "person";
+                }else{
+                    this.targetType = "depart";
+                }
+                if(!this.allMsgList[id]){
+                    this.allMsgList[id] = [];
+                }
+                this.currentDialog = {
+                    msgList : this.allMsgList[id],
+                    id : id
+                }
+            },
+            async init() {
+                this.roomId = this.$route.params.roomId;
+                this.userId = this.$route.params.userId;
+                document.addEventListener("keydown", this.keydownEnter);
+                this.initStyle();
+                await this.initSocket();
+            },
+//            async updateState(){
+//                let data = await this.$http.put("/user", {userId : this.userId, active:true}).catch((e)=>{
+//                    return false;
+//                });
+//                if(data){
+//                    this.users = data.body;
+//                }
+//            },
+            async getUsers() {
+                let data = await this.$http.get("/user").catch((e) => {
+                    return false;
+                });
+                if (data) {
+                    this.users = data.body;
+                }
+            },
             // 表情选择
-            faceSelect(item){
+            faceSelect(item) {
                 this.insertText("<img src='images/face/faceIcon/" + item + ".png'>");
                 this.faceListVisible = false;
             },
-            uploadHandler (response, file, fileList){
+            uploadHandler(response, file, fileList) {
                 this.fileList = [];
-                for(let item of fileList){
+                for (let item of fileList) {
                     if (item.response && item.response.code && item.response.code === "success") {
                         this.fileList.push(conf.fileServiceHost + "/" + item.response.path);
                     }
                 }
             },
             // 文件对话框取消
-            dialogClose(){
+            dialogClose() {
                 this.dialogVisible = false;
                 this.fileList = [];
                 this.$refs.upload.clearFiles();
             },
             // 文件对话框确定
-            dialogSure(){
+            dialogSure() {
                 this.dialogVisible = false;
-                for(let item of this.fileList){
+                for (let item of this.fileList) {
                     this.insertText("<div class='dialogue-img-wrap'><img src='" + item + "'/></div>");
                 }
                 this.fileList = [];
@@ -150,43 +283,28 @@
                 }
             },
             // 回车事件
-            keydownEnter(e){
-                util.keydownEnter(e,()=>{
+            keydownEnter(e) {
+                util.keydownEnter(e, () => {
                     this.submitMsg();
                 });
             },
             // 发送文本
-            submitMsg(){
+            submitMsg() {
                 let emitObj = {
-                    msg:this.$refs.editor.innerHTML,
-                    type:"text"
+                    msg: this.$refs.editor.innerHTML,
+                    type: "text",
+                    targetId :this.targetId,
+                    targetType:this.targetType
                 };
-                this.socket.emit("message",emitObj);
+                this.socket.emit("message", emitObj);
                 this.$refs.editor.innerHTML = "";
             },
-            // 初始化socket
-            initSocket(){
-                let $refMessageList = this.$refs.messages;
-                let $refMessagesWrap = this.$refs.messagesWrap;
-                let search = queryString.stringify({
-                    userId : this.userId,
-                    roomId:this.roomId
-                });
-                let url = window.location.origin + "?" +  search;
-                this.socket = io(url);
-                this.socket.on("message", (data)=>{
-                    this.msgList.push(data);
-                    // 滚动到底部
-                    setTimeout(()=>{
-                        $refMessagesWrap.scrollTop = $refMessageList.scrollHeight;
-                    },100);
-                });
-            },
             // 初始化样式
-            initStyle(){
+            initStyle() {
                 function initStyle() {
                     this.style.iWindowHeight = document.documentElement.clientHeight;
                 }
+
                 initStyle.call(this);
                 window.addEventListener("resize", () => {
                     initStyle.call(this);
