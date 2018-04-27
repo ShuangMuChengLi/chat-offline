@@ -2,25 +2,19 @@
     <div class="wrapper">
         <div :style="{height:style.iWindowHeight + 'px'}">
             <div class="left" :style="{height:style.iWindowHeight + 'px'}">
-                <h1>用户：{{userInfo.name}}</h1>
+                <h2 class="user-info">用户：{{userInfo.name}}</h2>
                 <div>
-                    <ul class="user-list">
-                        <li v-for="item in users">
-                            <h2 class="left-title" @click="changeRoom(item)"
-                                :class="{'current-dialog':currentDialog.id === item.id}">{{item.name}}</h2>
-                            <ul class="userList" id="userList">
-                                <li v-for="user in item.members"
-                                    v-if="user.id !== userId"
-                                    @click="changeRoom(user)"
-                                    :class="{'current-dialog':currentDialog.id === user.id}">
-                                    <el-badge :is-dot="false" class="item">
-                                        <img src="../../images/user.png" class="photo"/>
-                                    </el-badge>
-                                    <span>{{user.name}}</span>
-                                    <div class="state" :class="{active:user.active}">
-                                    </div>
-                                </li>
-                            </ul>
+                    <ul class="userList" id="userList">
+                        <li v-for="user in users"
+                            v-if="user.id !== userId"
+                            @click="changeRoom(user)"
+                            :class="{'current-dialog':currentDialog.id === user.id}">
+                            <el-badge :is-dot="false" class="item">
+                                <img src="../../images/user.png" class="photo"/>
+                            </el-badge>
+                            <span>{{user.name}}</span>
+                            <div class="state" :class="{active:user.online}">
+                            </div>
                         </li>
                     </ul>
                     <!--<div>-->
@@ -69,7 +63,7 @@
                         <a href="javascript:void(0)" @click="dialogVisible = !dialogVisible" title="发送图片">
                             <img src="images/img.png">
                         </a>
-                        <a href="javascript:void(0)" @click="initVidio()" v-show="currentDialog.targetType === 'person'"
+                        <a href="javascript:void(0)" @click="initVidio()"
                            title="视频通讯">
                             <img src="images/img.png">
                         </a>
@@ -151,29 +145,31 @@
                 fileList: [],
                 users: [],
                 myStream: null,
-                cloneStream: null
+                cloneStream: null,
+                videoReady:false,
+                targetVideoReady:false,
             };
         },
         watch: {},
         computed: {
             userInfo() {
-                for (let key in this.userList) {
-                    let item = this.userList[key];
+                for (let key in this.users) {
+                    let item = this.users[key];
                     if (item.id === this.userId) {
                         return item;
                     }
                 }
                 return {};
             },
-            userList() {
-                let userList = {};
-                for (let item of this.users) {
-                    for (let subItem of item.members) {
-                        userList[subItem.id] = subItem;
-                    }
-                }
-                return userList;
-            }
+//            userList() {
+//                let userList = {};
+//                for (let item of this.users) {
+//                    for (let subItem of item.members) {
+//                        userList[subItem.id] = subItem;
+//                    }
+//                }
+//                return userList;
+//            }
         },
         created: function () {
         },
@@ -182,6 +178,13 @@
         },
         methods: {
 
+            async init() {
+                this.roomId = this.$route.params.roomId;
+                this.userId = this.$route.params.userId;
+                document.addEventListener("keydown", this.keydownEnter);
+                this.initStyle();
+                await this.initSocket();
+            },
             // 初始化socket
             initSocket() {
                 let $refMessageList = this.$refs.messages;
@@ -201,20 +204,40 @@
                         }
                     }
                 });
+                this.socket.on("call",(data)=>{
+                    this.$confirm(data.from.userName + "正在呼叫您，是否接受视频通话？", '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        this.changeRoom({
+                            id: data.from.userId,
+                            online:true
+                        });
+                        this.targetVideoReady = true;
+                        this.initVidio();
+                    },() => {
+
+                    });
+
+                });
+//                this.socket.on("targetReady",()=>{
+//                    if(this.videoReady){
+//                        this.callBtn();
+//                    }
+//                });
                 this.socket.on("msg", (data) => {
-                    if (data.targetType === "depart") {
+                    if (data.userId === this.userId) {
+                        if (!this.allMsgList[data.target]) {
+                            this.allMsgList[data.target] = [];
+                        }
                         this.allMsgList[data.target].push(data);
                     } else {
-                        if (data.userId === this.userId) {
-                            this.allMsgList[data.target].push(data);
-                        } else {
-                            if (!this.allMsgList[data.userId]) {
-                                this.allMsgList[data.userId] = [];
-                            }
-                            this.allMsgList[data.userId].push(data);
+                        if (!this.allMsgList[data.userId]) {
+                            this.allMsgList[data.userId] = [];
                         }
+                        this.allMsgList[data.userId].push(data);
                     }
-
                     // 滚动到底部
                     setTimeout(() => {
                         $refMessagesWrap.scrollTop = $refMessageList.scrollHeight;
@@ -263,13 +286,6 @@
                     alert("Error when creating an offer");
                 });
             },
-            async init() {
-                this.roomId = this.$route.params.roomId;
-                this.userId = this.$route.params.userId;
-                document.addEventListener("keydown", this.keydownEnter);
-                this.initStyle();
-                await this.initSocket();
-            },
             vidioClose() {
                 this.videoDialogVisible = false;
                 this.localVideoSrc = null;
@@ -291,12 +307,6 @@
                 this.myStream = null;
             },
             async initVidio() {
-                let data = {
-                    type: "login",
-                    name: this.userId
-                };
-                console.log(data)
-                this.send(data);
                 this.videoDialogVisible = true;
                 //**********************
                 //Starting a peer connection
@@ -328,6 +338,16 @@
                             });
                         }
                     };
+                    if(this.targetVideoReady){
+                        this.callBtn();
+                    }else{
+                        this.socket.emit("call",{
+                            targetId:this.targetId
+                        })
+                    }
+//                    this.socket.emit("videoReady",{
+//                        targetId:this.targetId
+//                    } )
                 }, function (error) {
                     console.log(error);
                 });
@@ -366,16 +386,7 @@
             changeRoom(item) {
                 let id = item.id;
                 this.targetId = id;
-                if (item.members && item.members.length) {
-                    this.currentDialog.targetType = "depart";
-                    this.currentDialog.online = false;
-                } else {
-                    this.socket.emit("createRoom", {
-                        target: id
-                    });
-                    this.currentDialog.targetType = "person";
-                    this.currentDialog.online = item.active;
-                }
+                this.currentDialog.online = item.online;
                 this.currentDialog.msgList = this.allMsgList[id];
                 this.currentDialog.id = item.id;
                 if (!this.allMsgList[id]) {
@@ -456,7 +467,6 @@
                     msg: this.$refs.editor.innerHTML,
                     type: "text",
                     targetId: this.targetId,
-                    targetType: this.targetType
                 };
                 this.socket.emit("msg", emitObj);
                 this.$refs.editor.innerHTML = "";

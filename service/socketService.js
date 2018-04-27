@@ -3,35 +3,12 @@
  */
 let socketIO = require("socket.io");
 let _ = require("lodash");
-let users = require("../db/users");
-let userList = getUserList();
-
-let rooms = [];
-function getUser( userId) {
-    return userList[userId];
-}
-function getSocket(sockets , id) {
-    for(let key in sockets){
-        if(sockets[key].id === id){
-            return sockets[key]
-        }
-    }
-    return null;
-}
-function getUserList() {
-    let userList = {};
-    for(let item of users){
-        for(let subItem of item.members){
-            userList[subItem.id] = subItem;
-        }
-    }
-    return userList;
-}
+let usersList = require("../db/usersMap");
 function sendTo(connection, message) {
     connection.emit("m",message);
 }
 
-let videoUsers = {};
+let usersMap = {};
 let socketService = function (server) {
     let io = socketIO.listen(server);
 
@@ -39,42 +16,45 @@ let socketService = function (server) {
         let connection = socket;
         let userId = socket.handshake.query.userId;
         if(userId){
-            let user = getUser(userId);
-            user.active = true;
-            io.emit('updateUser',users);
-            userList[userId].socketId = socket.id;
+            let i = _.findIndex(usersList, {id:userId});
+            if(i !== -1){
+                usersMap[userId] = {};
+                usersMap[userId].name = usersList[i].name;
+                usersMap[userId].socket = socket;
+                usersList[i].online = true;
+            }
         }
         socket.on("disconnect",function () {
             if(userId){
-                let user = getUser(userId);
-                user.active = false;
-                io.emit('updateUser',users);
+                delete  usersMap[userId];
+                let i = _.findIndex(usersList, {id:userId});
+                if(i !== -1){
+                    usersList[i].online = false;
+                }
+                io.emit('updateUser',usersList);
             }
         });
+        io.emit('updateUser',usersList);
         // 更新用户信息
         socket.on("updateUser",()=>{
-            io.emit('updateUser',users);
+            io.emit('updateUser',usersList);
         });
-        // 创建房间
-        socket.on("createRoom",(data)=>{
-            if(userList[data.target].socketId){
-                let roomId;
-                let attempt1 = data.target + "-" + userId;
-                let attempt2 = userId + "-" + data.target;
-                if(!_.has(socket.rooms,attempt1) && !_.has(socket.rooms,attempt2)){
-                    roomId = attempt1;
-                    let targetSocket = getSocket(io.sockets.connected , userList[data.target].socketId);
-                    if(targetSocket){
-                        targetSocket.join(roomId);
-                        socket.join(roomId)
-                    }
-
+        // 呼叫
+        socket.on("call",(data)=>{
+            let conn = usersMap[data.targetId].socket;
+            conn.emit("call" , {
+                from :{
+                    userId:userId,
+                    userName: usersMap[data.targetId].name
                 }
-            }
+            })
         });
-        for(let dept of users){
-            socket.join(dept.id);
-        }
+        // 对方视讯已经初始化
+        // socket.on("videoReady",(data)=>{
+        //
+        //     let conn = usersMap[data.targetId].socket;
+        //     conn.emit("targetReady");
+        // });
         // console.log(socket.client)
         // for(let item in io.sockets.clients){
         //     console.log(item)
@@ -93,41 +73,24 @@ let socketService = function (server) {
         // });
         socket.on("msg",(data)=>{
             if(data.type === "text"){
-                let roomId;
-                if(data.targetType === "depart"){
-                    roomId = data.targetId;
-                }else{
-                    let attempt1 = data.targetId + "-" + userId;
-                    let attempt2 = userId + "-" + data.targetId;
-                    if(_.has(socket.rooms,attempt1)){
-                        roomId = attempt1;
-                    }else if(_.has(socket.rooms,attempt2)){
-                        roomId = attempt2;
-                    }else{
-                        return false;
-                    }
-                }
-
-                io.to(roomId).emit("msg", {
+                usersMap[data.targetId].socket.emit("msg", {
                     type:"msg",
                     msg:data.msg,
                     name:"",
                     target:data.targetId,
-                    userId:userId,
-                    targetType:data.targetType
+                    userId:userId
                 });
-                // socket.emit("me", {
-                //     type:"msg",
-                //     msg:data.msg,
-                //     name:"",
-                //     target:data.targetId,
-                //     userId:userId
-                // });
+                socket.emit("msg", {
+                    type:"msg",
+                    msg:data.msg,
+                    name:"",
+                    target:data.targetId,
+                    userId:userId
+                });
             }
-
         });
-        connection.on('m', function(message) {
-            var data;
+        socket.on('m', function(message) {
+            let data;
             //accepting only JSON messages
             try {
                 data = JSON.parse(message);
@@ -135,32 +98,15 @@ let socketService = function (server) {
                 console.log("Invalid JSON");
                 data = {};
             }
+            let conn;
             //switching type of the user message
             switch (data.type) {
-                case "login":
-                    console.log("User logged", data.name);
-                    //if anyone is logged in with this username then refuse
-                    if(videoUsers[data.name]) {
-                        sendTo(connection, {
-                            type: "login",
-                            success: false
-                        });
-                    } else {
-                        //save user connection on the server
-                        videoUsers[data.name] = connection;
-                        connection.name = data.name;
-                        sendTo(connection, {
-                            type: "login",
-                            success: true
-                        });
-                    }
-                    break;
                 case "offer":
                     //for ex. UserA wants to call UserB
                     console.log("Sending offer to: ", data.name);
                     //if UserB exists then send him offer details
-                    var conn = videoUsers[data.name];
-                    if(conn != null) {
+                    conn = usersMap[data.name].socket;
+                    if(conn !== null) {
                         //setting that UserA connected with UserB
                         connection.otherName = data.name;
                         sendTo(conn, {
@@ -173,8 +119,8 @@ let socketService = function (server) {
                 case "answer":
                     console.log("Sending answer to: ", data.name);
                     //for ex. UserB answers UserA
-                    var conn = videoUsers[data.name];
-                    if(conn != null) {
+                    conn = usersMap[data.name].socket;
+                    if(conn !== null) {
                         connection.otherName = data.name;
                         sendTo(conn, {
                             type: "answer",
@@ -184,8 +130,8 @@ let socketService = function (server) {
                     break;
                 case "candidate":
                     console.log("Sending candidate to:",data.name);
-                    var conn = videoUsers[data.name];
-                    if(conn != null) {
+                    conn = usersMap[data.name].socket;
+                    if(conn !== null) {
                         sendTo(conn, {
                             type: "candidate",
                             candidate: data.candidate
@@ -194,10 +140,10 @@ let socketService = function (server) {
                     break;
                 case "leave":
                     console.log("Disconnecting from", data.name);
-                    var conn = videoUsers[data.name];
+                    conn = usersMap[data.name].socket;
                     conn.otherName = null;
                     //notify the other user so he can disconnect his peer connection
-                    if(conn != null) {
+                    if(conn !== null) {
                         sendTo(conn, {
                             type: "leave"
                         });
@@ -213,21 +159,21 @@ let socketService = function (server) {
         });
         //when user exits, for example closes a browser window
         //this may help if we are still in "offer","answer" or "candidate" state
-        connection.on("disconnect", function() {
-            if(connection.name) {
-                delete videoUsers[connection.name];
-                // if(connection.otherName) {
-                //     console.log("Disconnecting from ", connection.otherName);
-                //     var conn = videoUsers[connection.otherName];
-                //     conn.otherName = null;
-                //     if(conn != null) {
-                //         sendTo(conn, {
-                //             type: "leave"
-                //         });
-                //     }
-                // }
-            }
-        });
+        // connection.on("disconnect", function() {
+        //     if(connection.name) {
+        //         delete users[connection.name];
+        //         // if(connection.otherName) {
+        //         //     console.log("Disconnecting from ", connection.otherName);
+        //         //     let conn = users[connection.otherName];
+        //         //     conn.otherName = null;
+        //         //     if(conn !== null) {
+        //         //         sendTo(conn, {
+        //         //             type: "leave"
+        //         //         });
+        //         //     }
+        //         // }
+        //     }
+        // });
     });
 };
 module.exports = socketService;

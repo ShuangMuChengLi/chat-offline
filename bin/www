@@ -106,5 +106,5 @@ function onListening() {
         ? "pipe " + addr
         : "port " + addr.port;
     debug("Listening on " + bind);
-    open("http://localhost:" + addr.port + "/#/roomid/1");
+    open("https://localhost:" + addr.port + "/#/roomid/1");
 }
