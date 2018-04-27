@@ -41,8 +41,8 @@ app.set("view engine", "ejs");
 app.use(favicon(path.join(__dirname, "favicon.ico")));
 // app.use(logger('dev'));
 
-app.use(bodyParser.json({limit:"50mb"}));
-app.use(bodyParser.urlencoded({limit:"50mb", extended: false }));
+app.use(bodyParser.json({limit:"2000mb"}));
+app.use(bodyParser.urlencoded({limit:"2000mb", extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "dist")));
 app.use(express.static(path.join(__dirname, "public")));

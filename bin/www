@@ -5,9 +5,14 @@
  */
 let log4js = require("log4js");
 let open = require("open");
+let fs = require("fs");
 let app = require("../app");
 let debug = require("debug")("node-web:server");
-let http = require("http");
+let https = require("https");
+var options = {
+    key  : fs.readFileSync('./cert/214593159680478.key'),
+    cert : fs.readFileSync('./cert/214593159680478.pem')
+}
 let socketService = require("../service/socketService");
 
 try {
@@ -31,8 +36,9 @@ app.set("port", port);
  * Create HTTP server.
  */
 
-let server = http.createServer(app);
+let server = https.createServer(options,app);
 socketService(server);
+// webRtcService(server);
 /**
  * Listen on provided port, on all network interfaces.
  */
