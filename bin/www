@@ -10,8 +10,8 @@ let app = require("../app");
 let debug = require("debug")("node-web:server");
 let https = require("https");
 var options = {
-    key  : fs.readFileSync('./cert/214593159680478.key'),
-    cert : fs.readFileSync('./cert/214593159680478.pem')
+    key  : fs.readFileSync('./cert/214628997060253.key'),
+    cert : fs.readFileSync('./cert/214628997060253.pem')
 }
 let socketService = require("../service/socketService");
 
@@ -29,7 +29,7 @@ let log = log4js.getLogger("startup");
  * Get port from environment and store in Express.
  */
 
-let port = normalizePort(process.env.PORT || "5001");
+let port = normalizePort(process.env.PORT || "443");
 app.set("port", port);
 
 /**
@@ -106,5 +106,5 @@ function onListening() {
         ? "pipe " + addr
         : "port " + addr.port;
     debug("Listening on " + bind);
-    open("https://localhost:" + addr.port + "/#/roomid/1");
+    open("https://localhost:" + addr.port );
 }
