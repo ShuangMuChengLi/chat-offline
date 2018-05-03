@@ -148,6 +148,7 @@
                 cloneStream: null,
                 videoReady:false,
                 targetVideoReady:false,
+                time:0
             };
         },
         watch: {},
@@ -204,28 +205,6 @@
                         }
                     }
                 });
-                this.socket.on("call",(data)=>{
-                    this.$confirm(data.from.userName + "正在呼叫您，是否接受视频通话？", '提示', {
-                        confirmButtonText: '确定',
-                        cancelButtonText: '取消',
-                        type: 'warning'
-                    }).then(() => {
-                        this.changeRoom({
-                            id: data.from.userId,
-                            online:true
-                        });
-                        this.targetVideoReady = true;
-                        this.initVidio();
-                    },() => {
-
-                    });
-
-                });
-//                this.socket.on("targetReady",()=>{
-//                    if(this.videoReady){
-//                        this.callBtn();
-//                    }
-//                });
                 this.socket.on("msg", (data) => {
                     if (data.userId === this.userId) {
                         if (!this.allMsgList[data.target]) {
@@ -242,6 +221,23 @@
                     setTimeout(() => {
                         $refMessagesWrap.scrollTop = $refMessageList.scrollHeight;
                     }, 100);
+                });
+                this.socket.on("call",(data)=>{
+                    this.$confirm(data.from.userName + "正在呼叫您，是否接受视频通话？", '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        this.changeRoom({
+                            id: data.from.userId,
+                            online:true
+                        });
+                        this.targetVideoReady = true;
+                        this.initVidio();
+                    },() => {
+
+                    });
+
                 });
                 this.socket.on("m",  (msg)=> {
                     var data = msg;
@@ -268,24 +264,6 @@
                     }
                 });
             },
-
-            callBtn() {
-                // create an offer
-                this.yourConn.createOffer( (offer)=> {
-                    this.send({
-                        type: "offer",
-                        offer: offer
-                    });
-                    try {
-                        this.yourConn.setLocalDescription(offer);
-                    }catch (e){
-                        console.error(e)
-                    }
-
-                }, function (error) {
-                    alert("Error when creating an offer");
-                });
-            },
             vidioClose() {
                 this.videoDialogVisible = false;
                 this.localVideoSrc = null;
@@ -306,6 +284,24 @@
                 this.cloneStream = null;
                 this.myStream = null;
             },
+            callBtn() {
+                // create an offer
+                console.log("createOffer   setLocalDescription")
+                this.yourConn.createOffer( (offer)=> {
+                    this.send({
+                        type: "offer",
+                        offer: offer
+                    });
+                    try {
+                        this.yourConn.setLocalDescription(offer);
+                    }catch (e){
+                        console.error(e)
+                    }
+
+                }, function (error) {
+                    alert("Error when creating an offer");
+                });
+            },
             async initVidio() {
                 this.videoDialogVisible = true;
                 //**********************
@@ -320,17 +316,24 @@
                     this.localVideoSrc = window.URL.createObjectURL(this.cloneStream);
                     //using Google public stun server
                     var configuration = {
-                         "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
+//                         "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
                     };
                     this.yourConn = new webkitRTCPeerConnection(configuration);
                     // setup stream listening
-                    this.yourConn.addStream(myStream);
+//                    if(this.targetVideoReady){
+                        this.yourConn.addStream(myStream);
+//                    }
+
                     //when a remote user adds stream to the peer connection, we display it
                     this.yourConn.onaddstream = (e) => {
+                        console.log("onaddstream")
                         this.remoteVideoSrc = window.URL.createObjectURL(e.stream);
                     };
                     // Setup ice handling
                     this.yourConn.onicecandidate = (event) => {
+                        if(this.time)return;
+                        this.time = 1;
+                        console.log("onicecandidate")
                         if (event.candidate) {
                             this.send({
                                 type: "candidate",
@@ -352,6 +355,7 @@
                     console.log(error);
                 });
             },
+
             //alias for sending JSON encoded messages
             send(message) {
                 if (!message.name && this.currentDialog.id) {
@@ -360,6 +364,7 @@
                 this.socket.emit("m", JSON.stringify(message));
             },
             handleOffer(offer, name) {
+                console.log("handleOffer createAnswer setLocalDescription ")
                 this.yourConn.setRemoteDescription(new RTCSessionDescription(offer));
 //                create an answer to an offer
                 this.yourConn.createAnswer( (answer)=> {
@@ -373,9 +378,11 @@
                 });
             },
             handleAnswer(answer) {
+                console.log("handleAnswer  setRemoteDescription")
                 this.yourConn.setRemoteDescription(new RTCSessionDescription(answer));
             },
             handleCandidate(candidate) {
+                console.log("handleCandidate   addIceCandidate")
                 try{
                     this.yourConn.addIceCandidate(new RTCIceCandidate(candidate));
                 }catch (e){
