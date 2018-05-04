@@ -39,16 +39,7 @@ let socketService = function (server) {
         socket.on("updateUser",()=>{
             io.emit('updateUser',usersList);
         });
-        // 呼叫
-        socket.on("call",(data)=>{
-            let conn = usersMap[data.targetId].socket;
-            conn.emit("call" , {
-                from :{
-                    userId:userId,
-                    userName: usersMap[data.targetId].name
-                }
-            })
-        });
+
         // 对方视讯已经初始化
         // socket.on("videoReady",(data)=>{
         //
@@ -89,6 +80,17 @@ let socketService = function (server) {
                 });
             }
         });
+        // 呼叫
+        socket.on("call",(data)=>{
+            let conn = usersMap[data.targetId].socket;
+            conn.emit("call" , {
+                business:data.business || "",
+                from :{
+                    userId:userId,
+                    userName: usersMap[data.targetId].name
+                }
+            })
+        });
         socket.on('m', function(message) {
             let data;
             //accepting only JSON messages
@@ -110,6 +112,7 @@ let socketService = function (server) {
                         //setting that UserA connected with UserB
                         connection.otherName = data.name;
                         sendTo(conn, {
+                            business:data.business || "",
                             type: "offer",
                             offer: data.offer,
                             name: connection.name
@@ -122,7 +125,9 @@ let socketService = function (server) {
                     conn = usersMap[data.name].socket;
                     if(conn !== null) {
                         connection.otherName = data.name;
+                        console.log(data.answer)
                         sendTo(conn, {
+                            business:data.business || "",
                             type: "answer",
                             answer: data.answer
                         });
@@ -133,6 +138,7 @@ let socketService = function (server) {
                     conn = usersMap[data.name].socket;
                     if(conn !== null) {
                         sendTo(conn, {
+                            business:data.business || "",
                             type: "candidate",
                             candidate: data.candidate
                         });

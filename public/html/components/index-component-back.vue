@@ -67,7 +67,7 @@
                            title="视频通讯">
                             <img src="images/video.png">
                         </a>
-                        <a href="javascript:void(0)" @click="initConnection()"
+                        <a href="javascript:void(0)" @click="initDesktop()"
                            title="桌面共享">
                             <img src="images/share.png">
                         </a>
@@ -90,29 +90,29 @@
                 <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
                 <div class="el-upload__tip" slot="tip">只能上传图片、pdf、html文件，且不超过500kb</div>
             </el-upload>
-            <!--<div class="dialog-footer">-->
-                <!--<a href="javascript:void(0)" class="dialog-btn gray-btn" @click="dialogClose()">-->
-                    <!--<span>关闭</span>-->
-                <!--</a>-->
-                <!--<a href="javascript:void(0)" class="dialog-btn green-btn" @click="dialogSure()">-->
-                    <!--<span>确定</span>-->
-                <!--</a>-->
-            <!--</div>-->
+            <div class="dialog-footer">
+                <a href="javascript:void(0)" class="dialog-btn gray-btn" @click="dialogClose()">
+                    <span>关闭</span>
+                </a>
+                <a href="javascript:void(0)" class="dialog-btn green-btn" @click="dialogSure()">
+                    <span>确定</span>
+                </a>
+            </div>
         </el-dialog>
         <el-dialog title="视频" :visible.sync="videoDialogVisible" class="file-dialog" @close="vidioClose" >
             <div id="callPage" class="call-page">
                 <video id="localVideo" autoplay :src="localVideoSrc" controls></video>
                 <video id="remoteVideo" autoplay :src="remoteVideoSrc" controls></video>
-                <div class="row text-center">
-                    <div class="col-md-12">
-                        <el-button type="primary" @click="callBtn">呼叫</el-button>
-                        <el-button type="danger">挂断</el-button>
-                    </div>
-                </div>
+                <!--<div class="row text-center">-->
+                    <!--<div class="col-md-12">-->
+                        <!--<el-button type="primary" @click="callBtn">呼叫</el-button>-->
+                        <!--<el-button type="danger">挂断</el-button>-->
+                    <!--</div>-->
+                <!--</div>-->
             </div>
         </el-dialog>
-        <el-dialog title="桌面共享" :visible.sync="desktopDialogVisible" class="file-dialog"  width="100%"  top="0">
-            <video autoplay :src="desktopVideoSrc" controls width="100%"></video>
+        <el-dialog title="桌面共享" :visible.sync="desktopDialogVisible" class="file-dialog" @close="vidioClose" width="100%"  top="0">
+                <video autoplay :src="desktopVideoSrc" controls width="100%"></video>
         </el-dialog>
     </div>
 </template>
@@ -232,11 +232,11 @@
                     }, 100);
                 });
                 this.socket.on("call",(data)=>{
-                    let msg;
+                    let msg = "";
                     if(!data.business){
                         msg = "正在呼叫您，是否接受视频通话？";
                     }else{
-                        msg = "请求共享您的桌面，是否接受？";
+                        msg = "分享桌面给您，是否接受？";
                     }
                     this.$confirm(data.from.userName + msg, '提示', {
                         confirmButtonText: '确定',
@@ -252,12 +252,10 @@
                             this.initVidio();
                         }else{
                             console.log("initDesktopRTCPeerConnection");
-                            this.initDesktop();
+                            this.initDesktopRTCPeerConnection();
                         }
                     },() => {
-
                     });
-
                 });
                 this.socket.on("m",  (msg)=> {
                     var data = msg;
@@ -265,16 +263,19 @@
                         //when somebody wants to call us
                         case "offer":
                             console.log("get offer")
-                            this.handleOffer(data.offer, data.name);
+                            this.handleOffer(data.offer, data.business);
+
                             break;
                         case "answer":
-                            console.log("get answer")
-                            this.handleAnswer(data.answer);
+//                            return;
+                            console.log("get answer" , data)
+                            this.handleAnswer(data.answer, data.business);
                             break;
                         //when a remote peer sends an ice candidate to us
                         case "candidate":
                             console.log("get candidate")
-                            this.handleCandidate(data.candidate);
+                            this.handleCandidate(data.candidate, data.business);
+
                             break;
 //                        case "leave":
 //                            handleLeave();
@@ -303,14 +304,13 @@
                 stop(this.myStream);
                 this.cloneStream = null;
                 this.myStream = null;
-                this.time = 0;
             },
             callBtn(business) {
                 // create an offer
                 console.log("createOffer   setLocalDescription")
                 this.yourConn.createOffer( (offer)=> {
                     this.send({
-                        business:business || "",
+                        business:business||"",
                         type: "offer",
                         offer: offer
                     });
@@ -330,7 +330,7 @@
                 //Starting a peer connection
                 //**********************
                 //getting local video stream
-                navigator.webkitGetUserMedia({video: true, audio: true}, (myStream) => {
+                navigator.mediaDevices.getUserMedia({video: true, audio: true}, (myStream) => {
                     this.myStream = myStream;
                     this.cloneStream = myStream.clone();
                     this.cloneStream.removeTrack(this.cloneStream.getAudioTracks()[0]);
@@ -338,34 +338,19 @@
                     this.localVideoSrc = window.URL.createObjectURL(this.cloneStream);
                     //using Google public stun server
                     var configuration = {
-                         "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
+//                         "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
                     };
                     this.yourConn = new webkitRTCPeerConnection(configuration);
                     // setup stream listening
-//                    console.log(this.targetVideoReady)
-                    this.yourConn.ontrack = (e) => {
-                        console.log("onaddstream")
-                        this.remoteVideoSrc = window.URL.createObjectURL(e.streams[0]);
-                    };
 //                    if(this.targetVideoReady){
-                        console.log("addTrack")
-//                        this.yourConn.addStream(myStream);
-                        myStream.getTracks().forEach(
-                            (track) =>{
-                                this.yourConn.addTrack(
-                                    track,
-                                    myStream
-                                );
-                            }
-                        );
+                        this.yourConn.addStream(myStream);
 //                    }
 
-
                     //when a remote user adds stream to the peer connection, we display it
-//                    this.yourConn.onaddstream = (e) => {
-//                        console.log("onaddstream")
-//                        this.remoteVideoSrc = window.URL.createObjectURL(e.stream);
-//                    };
+                    this.yourConn.onaddstream = (e) => {
+                        console.log("onaddstream")
+                        this.remoteVideoSrc = window.URL.createObjectURL(e.stream);
+                    };
                     // Setup ice handling
                     this.yourConn.onicecandidate = (event) => {
                         if(this.time)return;
@@ -385,28 +370,58 @@
                             targetId:this.targetId
                         })
                     }
-//                    this.socket.emit("videoReady",{
-//                        targetId:this.targetId
-//                    } )
                 }, function (error) {
                     console.log(error);
                 });
             },
-            initConnection(){
 
+            handleOffer(offer, business) {
+                console.log("handleOffer setRemoteDescription createAnswer setLocalDescription ---" + business)
+                this.yourConn.setRemoteDescription(new RTCSessionDescription(offer));
+//                create an answer to an offer
+                this.yourConn.createAnswer( (answer)=> {
+                    this.yourConn.setLocalDescription(answer);
+                    console.log("setLocalDescription",answer)
+                    this.send({
+                        business:business|| "",
+                        type: "answer",
+                        answer: answer
+                    });
+                }, function (error) {
+                    alert("Error when creating an answer");
+                });
+            },
+            handleAnswer() {
+                console.log("handleAnswer  setRemoteDescription", + arguments)
+//                this.yourConn.setRemoteDescription(new RTCSessionDescription(answer));
+            },
+            handleCandidate(candidate) {
+                console.log("handleCandidate   addIceCandidate")
+                try{
+                    this.yourConn.addIceCandidate(new RTCIceCandidate(candidate));
+                }catch (e){
+                    console.error(e)
+                }
+
+            },
+            //alias for sending JSON encoded messages
+            send(message) {
+                if (!message.name && this.currentDialog.id) {
+                    message.name = this.currentDialog.id;
+                }
+                this.socket.emit("m", JSON.stringify(message));
+            },
+            initDesktopRTCPeerConnection(){
                 this.desktopDialogVisible = true;
-                //using Google public stun server
                 var configuration = {
-//                                       "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
+//                   "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
                 };
                 this.yourConn = new webkitRTCPeerConnection(configuration);
-                // setup stream listening
-//                                    this.desktopVideoSrc = window.URL.createObjectURL(returnedStream);
+                // Setup ice handling
                 this.yourConn.onaddstream = (e) => {
                     console.log("onaddstream")
                     this.desktopVideoSrc = window.URL.createObjectURL(e.stream);
                 };
-                // Setup ice handling
                 this.yourConn.onicecandidate = (event) => {
                     console.log("onicecandidate")
                     if (event.candidate) {
@@ -417,15 +432,12 @@
                         });
                     }
                 };
-                this.socket.emit("call",{
-                    business: "desktop",
-                    targetId:this.targetId
-                })
+                this.callBtn("desktop");
             },
-            async initDesktop() {
+            initDesktop() {
+//                this.desktopDialogVisible = true;
+                const EXTENSION_ID = 'gkfjdjcjhgcigbpfelijdadlijincmkh';
 
-                const EXTENSION_ID = 'fkgidgecgnhockejbpjcjhcofijdhebi';
-                console.log(EXTENSION_ID);
                 chrome.runtime.sendMessage(EXTENSION_ID, 'version', response => {
                     if (!response) {
                         console.log('No extension');
@@ -449,16 +461,13 @@
                                 .then(returnedStream => {
                                     //using Google public stun server
                                     var configuration = {
-                                       "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
+//                                       "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
                                     };
                                     this.yourConn = new webkitRTCPeerConnection(configuration);
                                     // setup stream listening
                                     this.yourConn.addStream(returnedStream);
 //                                    this.desktopVideoSrc = window.URL.createObjectURL(returnedStream);
-                                    this.yourConn.onaddstream = (e) => {
-                                        console.log("onaddstream")
-                                        this.desktopVideoSrc = window.URL.createObjectURL(e.stream);
-                                    };
+
                                     // Setup ice handling
                                     this.yourConn.onicecandidate = (event) => {
                                         console.log("onicecandidate")
@@ -470,7 +479,10 @@
                                             });
                                         }
                                     };
-                                    this.callBtn("desktop");
+                                    this.socket.emit("call",{
+                                        business: "desktop",
+                                        targetId:this.targetId
+                                    })
                                 })
                                 .catch(err => {
                                     console.error('Could not get stream: ', err);
@@ -480,40 +492,6 @@
                         }
                     });
                 });
-            },
-            //alias for sending JSON encoded messages
-            send(message) {
-                if (!message.name && this.currentDialog.id) {
-                    message.name = this.currentDialog.id;
-                }
-                this.socket.emit("m", JSON.stringify(message));
-            },
-            handleOffer(offer, name) {
-                console.log("handleOffer createAnswer setLocalDescription ")
-                this.yourConn.setRemoteDescription(new RTCSessionDescription(offer));
-//                create an answer to an offer
-                this.yourConn.createAnswer( (answer)=> {
-                    this.yourConn.setLocalDescription(answer);
-                    this.send({
-                        type: "answer",
-                        answer: answer
-                    });
-                }, function (error) {
-                    alert("Error when creating an answer");
-                });
-            },
-            handleAnswer(answer) {
-                console.log("handleAnswer  setRemoteDescription")
-                this.yourConn.setRemoteDescription(new RTCSessionDescription(answer));
-            },
-            handleCandidate(candidate) {
-                console.log("handleCandidate   addIceCandidate")
-                try{
-                    this.yourConn.addIceCandidate(new RTCIceCandidate(candidate));
-                }catch (e){
-                    console.error(e)
-                }
-
             },
             changeRoom(item) {
                 let id = item.id;
