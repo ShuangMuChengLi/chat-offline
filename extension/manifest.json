@@ -1,5 +1,5 @@
 {
-  "name": "Twilio Video Screen sharing",
+  "name": "Twilio Video Screen sharing2",
   "description":
     "An extension to allow you to test Twilio Video screen sharing locally.",
   "version": "0.1.0",
@@ -9,7 +9,7 @@
     "persistent": false
   },
   "externally_connectable": {
-    "matches": ["*://chat.linchaoqun.com/*"]
+    "matches": ["*://chat.linchaoqun.com/*","*://localhost/*"]
   },
   "permissions": ["desktopCapture"]
 }

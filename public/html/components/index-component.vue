@@ -68,8 +68,12 @@
                             <img src="images/video.png">
                         </a>
                         <a href="javascript:void(0)" @click="initConnection()"
-                           title="桌面共享">
+                           title="查看对方电脑">
                             <img src="images/share.png">
+                        </a>
+                        <a href="javascript:void(0)" @click="initConnection()"
+                           title="请求远程协助">
+                            <img src="images/share-there.png">
                         </a>
                     </div>
                     <div contenteditable="true" class="input" v-html="inputMsg" ref="editor"></div>
@@ -111,7 +115,7 @@
                 </div>
             </div>
         </el-dialog>
-        <el-dialog title="桌面共享" :visible.sync="desktopDialogVisible" class="file-dialog"  width="100%"  top="0">
+        <el-dialog title="桌面共享" :visible.sync="desktopDialogVisible" class="file-dialog"  width="100%"  top="0"  @close="vidioClose">
             <video autoplay :src="desktopVideoSrc" controls width="100%"></video>
         </el-dialog>
     </div>
@@ -424,7 +428,7 @@
             },
             async initDesktop() {
 
-                const EXTENSION_ID = 'fkgidgecgnhockejbpjcjhcofijdhebi';
+                const EXTENSION_ID = 'ebfmnilnhfcemoldogggfoicjhmjemfn';
                 console.log(EXTENSION_ID);
                 chrome.runtime.sendMessage(EXTENSION_ID, 'version', response => {
                     if (!response) {
@@ -433,7 +437,6 @@
                     }
                     console.log('Extension version: ', response.version);
                     const request = { sources: ['window', 'screen', 'tab'] };
-                    let stream;
 
                     chrome.runtime.sendMessage(EXTENSION_ID, request, response => {
                         if (response && response.type === 'success') {
