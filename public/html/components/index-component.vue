@@ -269,6 +269,7 @@
                                 if(beShared){
                                     let stream = await this.initDesktop();
                                     this.yourConn.addStream(stream);
+                                    this.callBtn("desktop");
                                 }else{
                                     this.socket.emit("ready",{
                                         targetId:this.targetId
@@ -288,6 +289,7 @@
 
                     console.log("ready" , this.yourConn , stream)
                     this.yourConn.addStream(stream);
+                    this.callBtn("desktop");
                 });
                 this.socket.on("m",  (msg)=> {
                     var data = msg;
