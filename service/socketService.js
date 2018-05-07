@@ -85,9 +85,19 @@ let socketService = function (server) {
             let conn = usersMap[data.targetId].socket;
             conn.emit("call" , {
                 business:data.business || "",
+                shareMe:data.shareMe || false,
                 from :{
                     userId:userId,
                     userName: usersMap[data.targetId].name
+                }
+            })
+        });
+        // 连接就绪
+        socket.on("ready",(data)=>{
+            let conn = usersMap[data.targetId].socket;
+            conn.emit("ready" , {
+                from :{
+                    userId:userId
                 }
             })
         });

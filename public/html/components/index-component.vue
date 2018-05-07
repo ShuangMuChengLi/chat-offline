@@ -67,11 +67,11 @@
                            title="视频通讯">
                             <img src="images/video.png">
                         </a>
-                        <a href="javascript:void(0)" @click="initConnection()"
+                        <a href="javascript:void(0)" @click="getDesktopFromRemote()"
                            title="查看对方电脑">
                             <img src="images/share.png">
                         </a>
-                        <a href="javascript:void(0)" @click="initConnection()"
+                        <a href="javascript:void(0)" @click="shareDesktopToRemote()"
                            title="请求远程协助">
                             <img src="images/share-there.png">
                         </a>
@@ -158,10 +158,11 @@
                 myStream: null,
                 cloneStream: null,
                 videoReady:false,
-                targetVideoReady:false,
+                targetReady:false,
                 time:0,
                 desktopDialogVisible:false,
                 desktopVideoSrc:false,
+                beShared:false,
             };
         },
         watch: {},
@@ -236,32 +237,57 @@
                     }, 100);
                 });
                 this.socket.on("call",(data)=>{
+                    let beShared = !data.shareMe;// 是否被分享桌面
                     let msg;
                     if(!data.business){
                         msg = "正在呼叫您，是否接受视频通话？";
                     }else{
-                        msg = "请求共享您的桌面，是否接受？";
+                        if(beShared){
+                            msg = "请求共享您的桌面，是否接受？";
+                        }else{
+                            msg = "分享他的桌面给您，是否接受？";
+                        }
                     }
                     this.$confirm(data.from.userName + msg, '提示', {
                         confirmButtonText: '确定',
                         cancelButtonText: '取消',
                         type: 'warning'
-                    }).then(() => {
+                    }).then(async () => {
                         this.changeRoom({
                             id: data.from.userId,
                             online:true
                         });
-                        this.targetVideoReady = true;
+                        this.targetReady = true;
                         if(!data.business){
                             this.initVidio();
                         }else{
+                            this.beShared = beShared;
                             console.log("initDesktopRTCPeerConnection");
-                            this.initDesktop();
+                            this.initConnection();
+                            setTimeout(async ()=>{
+                                console.log("beShared:" + beShared);
+                                if(beShared){
+                                    let stream = await this.initDesktop();
+                                    this.yourConn.addStream(stream);
+                                }else{
+                                    this.socket.emit("ready",{
+                                        targetId:this.targetId
+                                    });
+                                    this.desktopDialogVisible = true;
+                                }
+                            },1000);
+
                         }
                     },() => {
 
                     });
 
+                });
+                this.socket.on("ready",async (data)=>{
+                    let stream = await this.initDesktop();
+
+                    console.log("ready" , this.yourConn , stream)
+                    this.yourConn.addStream(stream);
                 });
                 this.socket.on("m",  (msg)=> {
                     var data = msg;
@@ -346,12 +372,12 @@
                     };
                     this.yourConn = new webkitRTCPeerConnection(configuration);
                     // setup stream listening
-//                    console.log(this.targetVideoReady)
+//                    console.log(this.targetReady)
                     this.yourConn.ontrack = (e) => {
                         console.log("onaddstream")
                         this.remoteVideoSrc = window.URL.createObjectURL(e.streams[0]);
                     };
-//                    if(this.targetVideoReady){
+//                    if(this.targetReady){
                         console.log("addTrack")
 //                        this.yourConn.addStream(myStream);
                         myStream.getTracks().forEach(
@@ -363,8 +389,6 @@
                             }
                         );
 //                    }
-
-
                     //when a remote user adds stream to the peer connection, we display it
 //                    this.yourConn.onaddstream = (e) => {
 //                        console.log("onaddstream")
@@ -382,7 +406,7 @@
                             });
                         }
                     };
-                    if(this.targetVideoReady){
+                    if(this.targetReady){
                         this.callBtn();
                     }else{
                         this.socket.emit("call",{
@@ -396,7 +420,7 @@
                     console.log(error);
                 });
             },
-            initConnection(){
+            initConnectionOld(){
 
                 this.desktopDialogVisible = true;
                 //using Google public stun server
@@ -426,63 +450,93 @@
                     targetId:this.targetId
                 })
             },
-            async initDesktop() {
-
-                const EXTENSION_ID = 'ebfmnilnhfcemoldogggfoicjhmjemfn';
-                console.log(EXTENSION_ID);
-                chrome.runtime.sendMessage(EXTENSION_ID, 'version', response => {
-                    if (!response) {
-                        console.log('No extension');
-                        return;
-                    }
-                    console.log('Extension version: ', response.version);
-                    const request = { sources: ['window', 'screen', 'tab'] };
-
-                    chrome.runtime.sendMessage(EXTENSION_ID, request, response => {
-                        if (response && response.type === 'success') {
-                            navigator.mediaDevices
-                                .getUserMedia({
-                                    video: {
-                                        mandatory: {
-                                            chromeMediaSource: 'desktop',
-                                            chromeMediaSourceId: response.streamId
-                                        }
-                                    }
-                                })
-                                .then(returnedStream => {
-                                    //using Google public stun server
-                                    var configuration = {
-                                       "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
-                                    };
-                                    this.yourConn = new webkitRTCPeerConnection(configuration);
-                                    // setup stream listening
-                                    this.yourConn.addStream(returnedStream);
+            initConnection(){
+                console.log("initConnection")
+                //using Google public stun server
+                var configuration = {
+                    "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
+                };
+                this.yourConn = new webkitRTCPeerConnection(configuration);
+                // setup stream listening
+//                this.yourConn.addStream(returnedStream);
 //                                    this.desktopVideoSrc = window.URL.createObjectURL(returnedStream);
-                                    this.yourConn.onaddstream = (e) => {
-                                        console.log("onaddstream")
-                                        this.desktopVideoSrc = window.URL.createObjectURL(e.stream);
-                                    };
-                                    // Setup ice handling
-                                    this.yourConn.onicecandidate = (event) => {
-                                        console.log("onicecandidate")
-                                        if (event.candidate) {
-                                            this.send({
-                                                business: "desktop",
-                                                type: "candidate",
-                                                candidate: event.candidate
-                                            });
-                                        }
-                                    };
-                                    this.callBtn("desktop");
-                                })
-                                .catch(err => {
-                                    console.error('Could not get stream: ', err);
-                                });
-                        } else {
-                            console.error('Could not get stream');
+                this.yourConn.onaddstream = (e) => {
+                    console.log("onaddstream")
+                    this.desktopVideoSrc = window.URL.createObjectURL(e.stream);
+                };
+                // Setup ice handling
+                this.yourConn.onicecandidate = (event) => {
+                    console.log("onicecandidate")
+                    if (event.candidate) {
+                        this.send({
+                            business: "desktop",
+                            type: "candidate",
+                            candidate: event.candidate
+                        });
+                    }
+                };
+
+//                this.callBtn("desktop");
+            },
+            async shareDesktopToRemote(){
+                this.initConnection();
+                setTimeout(()=>{
+                    this.socket.emit("call",{
+                        business: "desktop",
+                        shareMe:true,
+                        targetId:this.targetId
+                    })
+                },1000);
+
+            },
+            async getDesktopFromRemote(){
+                this.desktopDialogVisible = true;
+                this.initConnection();
+                this.socket.emit("call",{
+                    business: "desktop",
+                    shareMe:false,
+                    targetId:this.targetId
+                })
+            },
+            initDesktop() {
+                let promise = new Promise((resovle , reject)=>{
+                    const EXTENSION_ID = 'ebfmnilnhfcemoldogggfoicjhmjemfn';
+                    console.log(EXTENSION_ID);
+                    chrome.runtime.sendMessage(EXTENSION_ID, 'version', response => {
+                        if (!response) {
+                            console.log('No extension');
+                            return;
                         }
+                        console.log('Extension version: ', response.version);
+                        const request = { sources: ['window', 'screen', 'tab'] };
+
+                        chrome.runtime.sendMessage(EXTENSION_ID, request, response => {
+                            if (response && response.type === 'success') {
+                                navigator.mediaDevices
+                                    .getUserMedia({
+                                        video: {
+                                            mandatory: {
+                                                chromeMediaSource: 'desktop',
+                                                chromeMediaSourceId: response.streamId
+                                            }
+                                        }
+                                    })
+                                    .then(returnedStream => {
+                                        console.log("getStream",returnedStream)
+                                        resovle(returnedStream);
+
+                                    })
+                                    .catch(err => {
+                                        resovle(err);
+                                        console.error('Could not get stream: ', err);
+                                    });
+                            } else {
+                                console.error('Could not get stream');
+                            }
+                        });
                     });
-                });
+                })
+                return promise;
             },
             //alias for sending JSON encoded messages
             send(message) {

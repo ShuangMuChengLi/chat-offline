@@ -33,7 +33,6 @@
         created: function () {
         },
         mounted: function () {
-            this.init();
         },
         methods: {
             goto(row){
