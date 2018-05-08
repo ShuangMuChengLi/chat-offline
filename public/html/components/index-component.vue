@@ -127,6 +127,7 @@
     const queryString = require("query-string");
     const util = require("../../js/util/util");
     const conf = require("../../config/conf");
+    const ENV = require("../../../config/env");
     export default {
         data() {
             return {
@@ -502,7 +503,13 @@
             },
             initDesktop() {
                 let promise = new Promise((resovle , reject)=>{
-                    const EXTENSION_ID = 'ebfmnilnhfcemoldogggfoicjhmjemfn';
+
+                    let EXTENSION_ID;
+                    if(ENV === "production"){
+                        EXTENSION_ID = "fkgidgecgnhockejbpjcjhcofijdhebi";
+                    }else{
+                        EXTENSION_ID = "ebfmnilnhfcemoldogggfoicjhmjemfn";
+                    }
                     console.log(EXTENSION_ID);
                     chrome.runtime.sendMessage(EXTENSION_ID, 'version', response => {
                         if (!response) {
