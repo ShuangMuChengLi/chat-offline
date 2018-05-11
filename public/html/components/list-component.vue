@@ -19,26 +19,49 @@
     const queryString = require("query-string");
     const util = require("../../js/util/util");
     const conf = require("../../config/conf");
+//    const userDao = require("../../../dao/userDao");
     const usersMap = require("../../../db/usersMap");
     export default {
         data() {
             return {
-                tableData: usersMap
+                tableData: []
+//                tableData : []
             }
         },
         watch: {},
         computed: {
 
         },
-        created: function () {
+        created() {
+//          (async () => {
+              this.getUsermap();
+//          })();
+
         },
         mounted: function () {
         },
         methods: {
             goto(row){
                 this.$router.push("/" + row.id)
+            },
+//           async getusermap(){
+//              await  userDao.selectUserList().then((data)=>{
+//                    console.log(data);
+//                    this.tableData = data;
+//                },(err)=>{
+//                    console.error(err);
+//                    this.tableData= [];
+//                });
+//
+//            }
+            getUsermap(){
+                this.$http.get('/usermap').then(response =>{
+//                    console.log(response.body.data);
+                    this.tableData = response.body.data;
+                }, response =>{
+                    this.$message.error(response.body.msg);
+                });
             }
-
         }
     };
 </script>

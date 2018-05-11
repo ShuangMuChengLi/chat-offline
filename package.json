@@ -11,6 +11,7 @@
   "dependencies": {
     "body-parser": "~1.16.0",
     "busboy": "^0.2.14",
+    "chai": "^4.1.2",
     "compression": "^1.6.2",
     "cookie": "^0.3.1",
     "cookie-parser": "~1.4.3",
@@ -25,8 +26,10 @@
     "lodash": "^4.17.4",
     "log4js": "^1.1.1",
     "matchdep": "^1.0.1",
+    "mocha": "^5.1.1",
     "moment": "^2.18.1",
     "morgan": "~1.7.0",
+    "mysql": "^2.15.0",
     "node-gyp": "^3.6.2",
     "node-xlsx": "^0.7.4",
     "open": "0.0.5",
