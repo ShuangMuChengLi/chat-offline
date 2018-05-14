@@ -91,7 +91,7 @@ exports.updateUserList = function (id , online) {//更新usermap表
 
 
 exports.selectUserList = function () {//查找 usermap表 所有用户
-    let promise =new Promise((resolve, reject) => {
+    let promise = new Promise((resolve, reject) => {
         let sSql = "SELECT * FROM userMap ";
         // console.log(sSql);
         db.getConnection(function (err,connection) {

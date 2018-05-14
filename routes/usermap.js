@@ -5,8 +5,11 @@ let url = require("url");
 let qs = require("querystring");//解析参数的库
 
 router.get("/", async function (routeReq, routeRes, next) {
-    let content = {};
-    content = await userDao.selectUserList();
+    let content = null;
+    content = await userDao.selectUserList().catch((err)=>{
+        next(err);
+        return false;
+    });
     //     .catch(err)=>{
     //     next(err);
     //     return false;
