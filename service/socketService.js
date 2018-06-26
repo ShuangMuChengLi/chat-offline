@@ -5,7 +5,7 @@ let socketIO = require("socket.io");
 let _ = require("lodash");
 // let usersList = require("../db/usersMap");
 const userDao = require("../dao/userDao");
-
+const msgDao = require("../dao/msgDao");
 function sendTo(connection, message) {
     connection.emit("m",message);
 }
@@ -97,7 +97,36 @@ let socketService = async function (server) {
         //     type:"system",
         //     msg:"进入聊天室",
         // });
-        socket.on("msg",(data)=>{;
+        let MsgList = await msgDao.selectMsg(userId).then((data)=>{//查找自己已经发送的消息
+            return data;
+            console.log(data);
+        }).catch((err)=>{
+            return [];
+            console.log(err);
+        });
+
+        let OtherMsgList = await msgDao.selectOtherMsg(userId).then((data)=> {//查找其他人发给该用户的消息
+            return data;
+        }).catch((err)=> {
+            return [];
+            console.log(err);
+        });
+        MsgList =MsgList.concat(OtherMsgList);//消息数组合并
+        MsgList.sort(function (a,b){//按照正序排序
+            return Date.parse(a.time)- Date.parse(b.time);
+        });
+        if(MsgList.length > 0){
+            for(let i in MsgList){
+                socket.emit("msg", {
+                    type : "msg",
+                    msg : MsgList[i].msg,
+                    name:"",
+                    target : MsgList[i].friend_Id,
+                    userId : MsgList[i].user_Id
+                });
+            }
+        }
+        socket.on("msg", async (data)=>{
             if(data.type === "text"){
                 usersMap[data.targetId].socket.emit("msg", {
                     type:"msg",
@@ -106,6 +135,11 @@ let socketService = async function (server) {
                     target:data.targetId,
                     userId:userId
                 });
+
+                await msgDao.addMsg(data.type,data.msg,"1",userId,data.targetId).then((data)=>{}).catch((err)=>{
+                    console.log(err);
+                });
+
                 socket.emit("msg", {
                     type:"msg",
                     msg:data.msg,

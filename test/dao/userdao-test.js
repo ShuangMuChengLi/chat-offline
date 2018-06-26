@@ -48,8 +48,15 @@ describe("selectUser",function () {
             return [];
         });
     });
-
-
+    it("addMsg",function (done) {
+        const MsgDao = require("../../dao/msgDao");
+        MsgDao.addMsg("text","TEST1","1","3","8").then((data) =>{//获取列表
+            console.log(data);
+        }).catch((err)=>{
+            console.log(err);
+            return [];
+        });
+    });
 
 
 })

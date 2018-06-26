@@ -2,7 +2,7 @@ const log4js = require("log4js");
 const log = log4js.getLogger("../log/app");
 let db = require("../config/db");
 const uuidV4 = require("uuid/v4");
-exports.addFriend= function (arg) {
+exports.addMsg= function (type,msg,Is_read,user_Id,friend_Id) {
     let promise =new Promise((resolve, reject) => {
         // let sSql = "INSERT INTO userMap (id, name,online) VALUES (?,?,?)";
         // console.log(arg);
@@ -15,7 +15,7 @@ exports.addFriend= function (arg) {
             let id = uuidV4();
             connection.query(
                 "INSERT INTO msgmap(id,msg,type,Is_read,user_Id,friend_Id,time) VALUES (?,?,?,?,?,?,?)",
-                [id,arg.msg,arg.type,arg.Is_read,arg.user_Id,arg.friend_Id,new Date()],
+                [id,msg,type,Is_read,user_Id,friend_Id,new Date()],
                 function (err, rows) {
                     connection.release();
                     if(err){
@@ -90,9 +90,9 @@ exports.selectMsgList = function () {//查找 friendmap表 所有用户
     return promise;
 };
 
-exports.selectMsg = function (user_Id,friend_Id) {//查找 friendmap表 用户
+exports.selectMsg = function (user_Id) {//查找 msg表 用户发送给好友的消息
     let promise =new Promise((resolve, reject) => {
-        let sSql = "SELECT * FROM msgmap WHERE user_Id=?,friend_Id=?";
+        let sSql = "SELECT * FROM msgmap WHERE user_Id=?";
         // console.log(sSql);
         db.getConnection(function (err,connection) {
             if(err){
@@ -102,7 +102,7 @@ exports.selectMsg = function (user_Id,friend_Id) {//查找 friendmap表 用户
             }
             connection.query(
                 sSql,
-                [user_Id,friend_Id],
+                [user_Id],
                 function (err, rows) {
                     connection.release();
                     if(err){
@@ -119,4 +119,31 @@ exports.selectMsg = function (user_Id,friend_Id) {//查找 friendmap表 用户
     return promise;
 };
 
+exports.selectOtherMsg = function (user_Id) {//查找 msg表 某用户的好友发送的消息
+    let promise =new Promise((resolve, reject) => {
+        let sSql = "SELECT * FROM msgmap AS o WHERE o.user_Id IN (SELECT friend_Id FROM friendmap WHERE user_Id = ?)";
+        // console.log(sSql);
+        db.getConnection(function (err,connection) {
+            if(err){
+                log.error(err);
+                reject(err);
+                return;
+            }
+            connection.query(
+                sSql,
+                [user_Id],
+                function (err, rows) {
+                    connection.release();
+                    if(err){
+                        log.error(err);
+                        reject(err);
+                        return;
+                    }
+                    resolve(rows);
+                }
+            );
+        })
 
+    });
+    return promise;
+};

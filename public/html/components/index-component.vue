@@ -13,6 +13,7 @@
                                 <img src="../../images/user.png" class="photo"/>
                             </el-badge>
                             <span>{{user.name}}</span>
+                            <div> </div>
                             <div class="state" :class="{active:user.online}">
                             </div>
                         </li>
@@ -238,6 +239,7 @@
                         }
                     }
                 });
+                //todo
                 this.socket.on("msg", (data) => {
                     if (data.userId === this.userId) {
                         if (!this.allMsgList[data.target]) {
