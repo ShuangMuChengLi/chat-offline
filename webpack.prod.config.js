@@ -14,7 +14,7 @@ module.exports = webpackMerge(commonConfig, {
     // entry: {
     //   vendor:['vue/dist/vue.common.js','vue-resource','vue-router']
     // },
-    devtool: false,
+    devtool: "source-map",
     module: {
         rules: [
             {
