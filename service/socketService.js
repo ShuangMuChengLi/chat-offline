@@ -63,7 +63,7 @@ let socketService = function (server) {
         //     msg:"进入聊天室",
         // });
         socket.on("msg",(data)=>{
-            if(data.type === "text"){
+            if(data.type === "text" && usersMap[data.targetId]){
                 usersMap[data.targetId].socket.emit("msg", {
                     type:"msg",
                     msg:data.msg,
@@ -82,24 +82,30 @@ let socketService = function (server) {
         });
         // 呼叫
         socket.on("call",(data)=>{
-            let conn = usersMap[data.targetId].socket;
-            conn.emit("call" , {
-                business:data.business || "",
-                shareMe:data.shareMe || false,
-                from :{
-                    userId:userId,
-                    userName: usersMap[data.targetId].name
-                }
-            })
+            if(usersMap[data.targetId]){
+                let conn = usersMap[data.targetId].socket;
+                conn.emit("call" , {
+                    business:data.business || "",
+                    shareMe:data.shareMe || false,
+                    from :{
+                        userId:userId,
+                        userName: usersMap[data.targetId].name
+                    }
+                })
+            }
+
         });
         // 连接就绪
         socket.on("ready",(data)=>{
-            let conn = usersMap[data.targetId].socket;
-            conn.emit("ready" , {
-                from :{
-                    userId:userId
-                }
-            })
+            if(usersMap[data.targetId]){
+                let conn = usersMap[data.targetId].socket;
+                conn.emit("ready" , {
+                    from :{
+                        userId:userId
+                    }
+                })
+            }
+
         });
         socket.on('m', function(message) {
             let data;

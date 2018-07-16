@@ -94,14 +94,14 @@
                 <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
                 <div class="el-upload__tip" slot="tip">只能上传图片、pdf、html文件，且不超过500kb</div>
             </el-upload>
-            <!--<div class="dialog-footer">-->
-                <!--<a href="javascript:void(0)" class="dialog-btn gray-btn" @click="dialogClose()">-->
-                    <!--<span>关闭</span>-->
-                <!--</a>-->
-                <!--<a href="javascript:void(0)" class="dialog-btn green-btn" @click="dialogSure()">-->
-                    <!--<span>确定</span>-->
-                <!--</a>-->
-            <!--</div>-->
+            <div class="dialog-footer">
+                <a href="javascript:void(0)" class="dialog-btn gray-btn" @click="dialogClose()">
+                    <span>关闭</span>
+                </a>
+                <a href="javascript:void(0)" class="dialog-btn green-btn" @click="dialogSure()">
+                    <span>确定</span>
+                </a>
+            </div>
         </el-dialog>
         <el-dialog title="视频" :visible.sync="videoDialogVisible" class="file-dialog" @close="vidioClose" >
             <div id="callPage" class="call-page">
@@ -370,14 +370,27 @@
                     //displaying local video stream on the page
                     this.localVideoSrc = window.URL.createObjectURL(this.cloneStream);
                     //using Google public stun server
+//                    var configuration = {
+////                         "iceServers": [{ "url": "stun:172.16.36.233:3478" }]
+//                         "iceServers": [{ "url": "stun:stun.xten.com" }]
+////                         "iceServers": [{ "url": "stun:stun.l.google.com:19302" }]
+//                    };
                     var configuration = {
-                         "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
+                        iceServers: [{
+                            urls: [
+                                "stun:stun.l.google.com:19302",
+                            ]
+                        }, {
+                            urls: "turn:numb.viagenie.ca",
+                            username: "zc1217zc@126.com",
+                            credential: "fhqbukn"
+                        }]
                     };
                     this.yourConn = new webkitRTCPeerConnection(configuration);
                     // setup stream listening
 //                    console.log(this.targetReady)
                     this.yourConn.ontrack = (e) => {
-                        console.log("onaddstream")
+                        console.log("onaddstream",e)
                         this.remoteVideoSrc = window.URL.createObjectURL(e.streams[0]);
                     };
 //                    if(this.targetReady){
@@ -399,10 +412,8 @@
 //                    };
                     // Setup ice handling
                     this.yourConn.onicecandidate = (event) => {
-                        if(this.time)return;
-                        this.time = 1;
-                        console.log("onicecandidate")
-                        if (event.candidate) {
+                        console.log("发送ICE候选");
+                        if (event.candidate !== null) {
                             this.send({
                                 type: "candidate",
                                 candidate: event.candidate
@@ -423,41 +434,41 @@
                     console.log(error);
                 });
             },
-            initConnectionOld(){
-
-                this.desktopDialogVisible = true;
-                //using Google public stun server
-                var configuration = {
-//                                       "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
-                };
-                this.yourConn = new webkitRTCPeerConnection(configuration);
-                // setup stream listening
-//                                    this.desktopVideoSrc = window.URL.createObjectURL(returnedStream);
-                this.yourConn.onaddstream = (e) => {
-                    console.log("onaddstream")
-                    this.desktopVideoSrc = window.URL.createObjectURL(e.stream);
-                };
-                // Setup ice handling
-                this.yourConn.onicecandidate = (event) => {
-                    console.log("onicecandidate")
-                    if (event.candidate) {
-                        this.send({
-                            business: "desktop",
-                            type: "candidate",
-                            candidate: event.candidate
-                        });
-                    }
-                };
-                this.socket.emit("call",{
-                    business: "desktop",
-                    targetId:this.targetId
-                })
-            },
+//            initConnectionOld(){
+//
+//                this.desktopDialogVisible = true;
+//                //using Google public stun server
+//                var configuration = {
+////                                       "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
+//                };
+//                this.yourConn = new webkitRTCPeerConnection(configuration);
+//                // setup stream listening
+////                                    this.desktopVideoSrc = window.URL.createObjectURL(returnedStream);
+//                this.yourConn.onaddstream = (e) => {
+//                    console.log("onaddstream")
+//                    this.desktopVideoSrc = window.URL.createObjectURL(e.stream);
+//                };
+//                // Setup ice handling
+//                this.yourConn.onicecandidate = (event) => {
+//                    console.log("onicecandidate")
+//                    if (event.candidate) {
+//                        this.send({
+//                            business: "desktop",
+//                            type: "candidate",
+//                            candidate: event.candidate
+//                        });
+//                    }
+//                };
+//                this.socket.emit("call",{
+//                    business: "desktop",
+//                    targetId:this.targetId
+//                })
+//            },
             initConnection(){
                 console.log("initConnection")
                 //using Google public stun server
                 var configuration = {
-                    "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
+                    "iceServers": [{ "url": "stun:stun.xten.com" }]
                 };
                 this.yourConn = new webkitRTCPeerConnection(configuration);
                 // setup stream listening
