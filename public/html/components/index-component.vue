@@ -103,7 +103,7 @@
                 </a>
             </div>
         </el-dialog>
-        <el-dialog title="视频" :visible.sync="videoDialogVisible" class="file-dialog" @close="vidioClose" >
+        <el-dialog title="视频" :visible.sync="videoDialogVisible" class="file-dialog" @close="vidioClose">
             <div id="callPage" class="call-page">
                 <video id="localVideo" autoplay :src="localVideoSrc" controls></video>
                 <video id="remoteVideo" autoplay :src="remoteVideoSrc" controls></video>
@@ -115,7 +115,8 @@
                 </div>
             </div>
         </el-dialog>
-        <el-dialog title="桌面共享" :visible.sync="desktopDialogVisible" class="file-dialog"  width="100%"  top="0"  @close="vidioClose">
+        <el-dialog title="桌面共享" :visible.sync="desktopDialogVisible" class="file-dialog" width="100%" top="0"
+                   @close="vidioClose">
             <video autoplay :src="desktopVideoSrc" controls width="100%"></video>
         </el-dialog>
     </div>
@@ -158,12 +159,12 @@
                 users: [],
                 myStream: null,
                 cloneStream: null,
-                videoReady:false,
-                targetReady:false,
-                time:0,
-                desktopDialogVisible:false,
-                desktopVideoSrc:false,
-                beShared:false,
+                videoReady: false,
+                targetReady: false,
+                time: 0,
+                desktopDialogVisible: false,
+                desktopVideoSrc: false,
+                beShared: false,
             };
         },
         watch: {},
@@ -237,15 +238,15 @@
                         $refMessagesWrap.scrollTop = $refMessageList.scrollHeight;
                     }, 100);
                 });
-                this.socket.on("call",(data)=>{
+                this.socket.on("call", (data) => {
                     let beShared = !data.shareMe;// 是否被分享桌面
                     let msg;
-                    if(!data.business){
+                    if (!data.business) {
                         msg = "正在呼叫您，是否接受视频通话？";
-                    }else{
-                        if(beShared){
+                    } else {
+                        if (beShared) {
                             msg = "请求共享您的桌面，是否接受？";
-                        }else{
+                        } else {
                             msg = "分享他的桌面给您，是否接受？";
                         }
                     }
@@ -256,43 +257,43 @@
                     }).then(async () => {
                         this.changeRoom({
                             id: data.from.userId,
-                            online:true
+                            online: true
                         });
                         this.targetReady = true;
-                        if(!data.business){
+                        if (!data.business) {
                             this.initVidio();
-                        }else{
+                        } else {
                             this.beShared = beShared;
                             console.log("initDesktopRTCPeerConnection");
                             this.initConnection();
-                            setTimeout(async ()=>{
+                            setTimeout(async () => {
                                 console.log("beShared:" + beShared);
-                                if(beShared){
+                                if (beShared) {
                                     let stream = await this.initDesktop();
                                     this.yourConn.addStream(stream);
                                     this.callBtn("desktop");
-                                }else{
-                                    this.socket.emit("ready",{
-                                        targetId:this.targetId
+                                } else {
+                                    this.socket.emit("ready", {
+                                        targetId: this.targetId
                                     });
                                     this.desktopDialogVisible = true;
                                 }
-                            },1000);
+                            }, 1000);
 
                         }
-                    },() => {
+                    }, () => {
 
                     });
 
                 });
-                this.socket.on("ready",async (data)=>{
+                this.socket.on("ready", async (data) => {
                     let stream = await this.initDesktop();
 
-                    console.log("ready" , this.yourConn , stream)
+                    console.log("ready", this.yourConn, stream)
                     this.yourConn.addStream(stream);
                     this.callBtn("desktop");
                 });
-                this.socket.on("m",  (msg)=> {
+                this.socket.on("m", (msg) => {
                     var data = msg;
                     switch (data.type) {
                         //when somebody wants to call us
@@ -341,15 +342,15 @@
             callBtn(business) {
                 // create an offer
                 console.log("createOffer   setLocalDescription")
-                this.yourConn.createOffer( (offer)=> {
+                this.yourConn.createOffer((offer) => {
                     this.send({
-                        business:business || "",
+                        business: business || "",
                         type: "offer",
                         offer: offer
                     });
                     try {
                         this.yourConn.setLocalDescription(offer);
-                    }catch (e){
+                    } catch (e) {
                         console.error(e)
                     }
 
@@ -376,34 +377,37 @@
 ////                         "iceServers": [{ "url": "stun:stun.l.google.com:19302" }]
 //                    };
                     var configuration = {
-                        iceServers: [{
-                            urls: [
-                                "stun:stun.l.google.com:19302",
-                            ]
-                        }, {
-                            urls: "turn:numb.viagenie.ca",
-                            username: "zc1217zc@126.com",
-                            credential: "fhqbukn"
-                        }]
+//                        iceServers: [
+//                            {
+//                                urls: [
+//                                    "stun:stun.l.google.com:19302",
+//                                ]
+//                            },
+//                            {
+//                                urls: "turn:numb.viagenie.ca",
+//                                username: "zc1217zc@126.com",
+//                                credential: "fhqbukn"
+//                            }]
                     };
+                    console.log(configuration)
                     this.yourConn = new webkitRTCPeerConnection(configuration);
                     // setup stream listening
 //                    console.log(this.targetReady)
                     this.yourConn.ontrack = (e) => {
-                        console.log("onaddstream",e)
+                        console.log("onaddstream", e)
                         this.remoteVideoSrc = window.URL.createObjectURL(e.streams[0]);
                     };
 //                    if(this.targetReady){
-                        console.log("addTrack")
+                    console.log("addTrack")
 //                        this.yourConn.addStream(myStream);
-                        myStream.getTracks().forEach(
-                            (track) =>{
-                                this.yourConn.addTrack(
-                                    track,
-                                    myStream
-                                );
-                            }
-                        );
+                    myStream.getTracks().forEach(
+                        (track) => {
+                            this.yourConn.addTrack(
+                                track,
+                                myStream
+                            );
+                        }
+                    );
 //                    }
                     //when a remote user adds stream to the peer connection, we display it
 //                    this.yourConn.onaddstream = (e) => {
@@ -420,11 +424,11 @@
                             });
                         }
                     };
-                    if(this.targetReady){
+                    if (this.targetReady) {
                         this.callBtn();
-                    }else{
-                        this.socket.emit("call",{
-                            targetId:this.targetId
+                    } else {
+                        this.socket.emit("call", {
+                            targetId: this.targetId
                         })
                     }
 //                    this.socket.emit("videoReady",{
@@ -464,11 +468,11 @@
 //                    targetId:this.targetId
 //                })
 //            },
-            initConnection(){
+            initConnection() {
                 console.log("initConnection")
                 //using Google public stun server
                 var configuration = {
-                    "iceServers": [{ "url": "stun:stun.xten.com" }]
+                    "iceServers": [{"url": "stun:stun.xten.com"}]
                 };
                 this.yourConn = new webkitRTCPeerConnection(configuration);
                 // setup stream listening
@@ -492,33 +496,33 @@
 
 //                this.callBtn("desktop");
             },
-            async shareDesktopToRemote(){
+            async shareDesktopToRemote() {
                 this.initConnection();
-                setTimeout(()=>{
-                    this.socket.emit("call",{
+                setTimeout(() => {
+                    this.socket.emit("call", {
                         business: "desktop",
-                        shareMe:true,
-                        targetId:this.targetId
+                        shareMe: true,
+                        targetId: this.targetId
                     })
-                },1000);
+                }, 1000);
 
             },
-            async getDesktopFromRemote(){
+            async getDesktopFromRemote() {
                 this.desktopDialogVisible = true;
                 this.initConnection();
-                this.socket.emit("call",{
+                this.socket.emit("call", {
                     business: "desktop",
-                    shareMe:false,
-                    targetId:this.targetId
+                    shareMe: false,
+                    targetId: this.targetId
                 })
             },
             initDesktop() {
-                let promise = new Promise((resovle , reject)=>{
+                let promise = new Promise((resovle, reject) => {
 
                     let EXTENSION_ID;
-                    if(ENV === "production"){
+                    if (ENV === "production") {
                         EXTENSION_ID = "fkgidgecgnhockejbpjcjhcofijdhebi";
-                    }else{
+                    } else {
                         EXTENSION_ID = "ebfmnilnhfcemoldogggfoicjhmjemfn";
                     }
                     console.log(EXTENSION_ID);
@@ -528,7 +532,7 @@
                             return;
                         }
                         console.log('Extension version: ', response.version);
-                        const request = { sources: ['window', 'screen', 'tab'] };
+                        const request = {sources: ['window', 'screen', 'tab']};
 
                         chrome.runtime.sendMessage(EXTENSION_ID, request, response => {
                             if (response && response.type === 'success') {
@@ -542,7 +546,7 @@
                                         }
                                     })
                                     .then(returnedStream => {
-                                        console.log("getStream",returnedStream)
+                                        console.log("getStream", returnedStream)
                                         resovle(returnedStream);
 
                                     })
@@ -569,7 +573,7 @@
                 console.log("handleOffer createAnswer setLocalDescription ")
                 this.yourConn.setRemoteDescription(new RTCSessionDescription(offer));
 //                create an answer to an offer
-                this.yourConn.createAnswer( (answer)=> {
+                this.yourConn.createAnswer((answer) => {
                     this.yourConn.setLocalDescription(answer);
                     this.send({
                         type: "answer",
@@ -585,9 +589,9 @@
             },
             handleCandidate(candidate) {
                 console.log("handleCandidate   addIceCandidate")
-                try{
+                try {
                     this.yourConn.addIceCandidate(new RTCIceCandidate(candidate));
-                }catch (e){
+                } catch (e) {
                     console.error(e)
                 }
 
