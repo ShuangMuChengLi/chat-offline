@@ -7,6 +7,7 @@ const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const log = log4js.getLogger("app");
 
+const usermap = require("./routes/usermap");
 const getData = require("./routes/getData");
 const apiTest = require("./routes/api-test");
 const User = require("./routes/User");
@@ -53,6 +54,7 @@ app.use("/json", getData);
 app.use("/api", apiTest);
 app.use("/user", User);
 app.use("/upload", upload);
+app.use("/usermap",usermap);
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
     if(req.headers.accept.match("image")){

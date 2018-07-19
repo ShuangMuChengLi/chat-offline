@@ -3,41 +3,76 @@
  */
 let socketIO = require("socket.io");
 let _ = require("lodash");
-let usersList = require("../db/usersMap");
+// let usersList = require("../db/usersMap");
+const userDao = require("../dao/userDao");
+
 function sendTo(connection, message) {
     connection.emit("m",message);
 }
-
+// a = {
+//     "fsfsdfdsf":{
+//         name:"ddd",
+//             socketIO:null
+// }
+// }
+// a["fsfsdfdsf"].socketIO
 let usersMap = {};
-let socketService = function (server) {
+let socketService = async function (server) {
+
     let io = socketIO.listen(server);
 
-    io.on("connection", function (socket) {
+    io.on("connection", async function (socket) {
         let connection = socket;
-        let userId = socket.handshake.query.userId;
+        let userId= socket.handshake.query.userId;
+        let usersList;
         if(userId){
-            let i = _.findIndex(usersList, {id:userId});
-            if(i !== -1){
+            let user = await userDao.selectUser(userId).then((data) =>{//获取列表
+                return data
+            }).catch((err)=>{
+                console.log(err);
+                return [];
+            });
+            usersList = await userDao.getFriendsListByUserId(userId).then((data) =>{//获取列表
+                return data
+            }).catch((err)=>{
+                console.log(err);
+                return [];
+            });
+            usersList.push({
+                name: user.name,
+                id:userId
+            });
+
+            let i = _.findIndex(usersList, {id: userId});
+            if(i !== -1) {
                 usersMap[userId] = {};
                 usersMap[userId].name = usersList[i].name;
                 usersMap[userId].socket = socket;
-                usersList[i].online = true;
+                usersList[i].online = 1;
             }
+            await userDao.updateUserList(userId , 1).then((data) =>{
+                // usersList =data;
+                // console.log(data);
+                }).catch((err)=>{
+                console.log(err);
+            });
+            // }
         }
-        socket.on("disconnect",function () {
+        socket.on("disconnect",async function () {
             if(userId){
                 delete  usersMap[userId];
                 let i = _.findIndex(usersList, {id:userId});
                 if(i !== -1){
-                    usersList[i].online = false;
+                    usersList[i].online = 0;
+                 userDao.updateUserList(userId , 0).then((data) =>{}).catch((err)=>{console.log(err);});
                 }
-                io.emit('updateUser',usersList);
+                io.emit('updateUser',{usersList:usersList,userId:userId});
             }
         });
-        io.emit('updateUser',usersList);
+        io.emit('updateUser', {usersList:usersList,userId:userId});
         // 更新用户信息
         socket.on("updateUser",()=>{
-            io.emit('updateUser',usersList);
+            io.emit('updateUser', {usersList:usersList,userId:userId});
         });
 
         // 对方视讯已经初始化

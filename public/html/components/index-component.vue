@@ -124,6 +124,8 @@
 
 <script>
     import io from "socket.io-client";
+
+    let _ = require("lodash");
     const queryString = require("query-string");
     const util = require("../../js/util/util");
     const conf = require("../../config/conf");
@@ -201,12 +203,28 @@
                 });
                 let url = window.location.origin + "?" + search;
                 this.socket = io(url);
-                this.socket.on("updateUser", (users) => {
-                    this.users = users;
-                    if (!this.allMsgList) {
-                        this.allMsgList = {};
-                        for (let dept of this.users) {
-                            this.allMsgList[dept.id] = [];
+                this.socket.on("updateUser", async (users) => {
+                    if (this.userId !== users.userId) {
+                        let i = _.findIndex(this.users, {id: users.userId});
+                        let j = _.findIndex(users.usersList, {id: users.userId});
+                        this.users[i].online = users.usersList[j].online;
+                        this.$set(this.users,i,this.users[i]);
+
+                        if (!this.allMsgList) {
+                            this.allMsgList = {};
+                            for (let dept of this.users) {
+                                this.allMsgList[dept.id] = [];
+                            }
+                        }
+                    } else {
+                        console.log(users.userId);
+                        this.users = users.usersList;
+                        console.log(users.usersList);
+                        if (!this.allMsgList) {
+                            this.allMsgList = {};
+                            for (let dept of this.users) {
+                                this.allMsgList[dept.id] = [];
+                            }
                         }
                     }
                 });
@@ -334,7 +352,6 @@
                     alert("Error when creating an offer");
                 });
             },
-
             async initVidio() {
                 this.videoDialogVisible = true;
                 await new Promise((resolve,reject)=>{
