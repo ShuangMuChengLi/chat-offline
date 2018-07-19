@@ -105,8 +105,8 @@
         </el-dialog>
         <el-dialog title="视频" :visible.sync="videoDialogVisible" class="file-dialog" @close="vidioClose">
             <div id="callPage" class="call-page">
-                <video id="localVideo" autoplay :src="localVideoSrc" controls></video>
-                <video id="remoteVideo" autoplay :src="remoteVideoSrc" controls></video>
+                <video id="localVideo" autoplay controls></video>
+                <video id="remoteVideo" autoplay controls></video>
                 <div class="row text-center">
                     <div class="col-md-12">
                         <el-button type="primary" @click="callBtn">呼叫</el-button>
@@ -116,25 +116,25 @@
             </div>
         </el-dialog>
         <el-dialog title="桌面共享" :visible.sync="desktopDialogVisible" class="file-dialog" width="100%" top="0"
-                   @close="vidioClose">
-            <video autoplay :src="desktopVideoSrc" controls width="100%"></video>
+                   @close="desktopClose">
+            <video autoplay id="desktopVideo" controls width="100%"></video>
         </el-dialog>
     </div>
 </template>
 
 <script>
     import io from "socket.io-client";
-
     const queryString = require("query-string");
     const util = require("../../js/util/util");
     const conf = require("../../config/conf");
-    const ENV = require("../../../config/env");
+    const webRTCConfig = require("../../config/webRTC-config");
     export default {
         data() {
             return {
-                yourConn: null,
-                localVideoSrc: null,
-                remoteVideoSrc: null,
+                desktopConn: null,
+                videoConn: null,
+                localVideo: null,
+                remoteVideo: null,
                 loading: false,
                 dialogVisible: false,
                 videoDialogVisible: false,
@@ -157,13 +157,13 @@
                 socket: {},
                 fileList: [],
                 users: [],
-                myStream: null,
-                cloneStream: null,
+                videoStream: null,
+                cloneVideoStream: null,
                 videoReady: false,
                 targetReady: false,
                 time: 0,
                 desktopDialogVisible: false,
-                desktopVideoSrc: false,
+                desktopVideo: false,
                 beShared: false,
             };
         },
@@ -177,16 +177,7 @@
                     }
                 }
                 return {};
-            },
-//            userList() {
-//                let userList = {};
-//                for (let item of this.users) {
-//                    for (let subItem of item.members) {
-//                        userList[subItem.id] = subItem;
-//                    }
-//                }
-//                return userList;
-//            }
+            }
         },
         created: function () {
         },
@@ -194,7 +185,6 @@
             this.init();
         },
         methods: {
-
             async init() {
                 this.roomId = this.$route.params.roomId;
                 this.userId = this.$route.params.userId;
@@ -207,8 +197,7 @@
                 let $refMessageList = this.$refs.messages;
                 let $refMessagesWrap = this.$refs.messagesWrap;
                 let search = queryString.stringify({
-                    userId: this.userId,
-//                    roomId: this.roomId
+                    userId: this.userId
                 });
                 let url = window.location.origin + "?" + search;
                 this.socket = io(url);
@@ -264,13 +253,11 @@
                             this.initVidio();
                         } else {
                             this.beShared = beShared;
-                            console.log("initDesktopRTCPeerConnection");
                             this.initConnection();
                             setTimeout(async () => {
-                                console.log("beShared:" + beShared);
                                 if (beShared) {
                                     let stream = await this.initDesktop();
-                                    this.yourConn.addStream(stream);
+                                    this.desktopConn.addStream(stream);
                                     this.callBtn("desktop");
                                 } else {
                                     this.socket.emit("ready", {
@@ -279,7 +266,6 @@
                                     this.desktopDialogVisible = true;
                                 }
                             }, 1000);
-
                         }
                     }, () => {
 
@@ -288,31 +274,20 @@
                 });
                 this.socket.on("ready", async (data) => {
                     let stream = await this.initDesktop();
-
-                    console.log("ready", this.yourConn, stream)
-                    this.yourConn.addStream(stream);
+                    this.desktopConn.addStream(stream);
                     this.callBtn("desktop");
                 });
-                this.socket.on("m", (msg) => {
-                    var data = msg;
+                this.socket.on("m", (data) => {
                     switch (data.type) {
-                        //when somebody wants to call us
                         case "offer":
-                            console.log("get offer")
-                            this.handleOffer(data.offer, data.name);
+                            this.handleOffer(data);
                             break;
                         case "answer":
-                            console.log("get answer")
-                            this.handleAnswer(data.answer);
+                            this.handleAnswer(data);
                             break;
-                        //when a remote peer sends an ice candidate to us
                         case "candidate":
-                            console.log("get candidate")
-                            this.handleCandidate(data.candidate);
+                            this.handleCandidate(data);
                             break;
-//                        case "leave":
-//                            handleLeave();
-//                            break;
                         default:
                             break;
                     }
@@ -320,7 +295,6 @@
             },
             vidioClose() {
                 this.videoDialogVisible = false;
-                this.localVideoSrc = null;
 
                 function stop(stream) {
                     let tracks = stream.getAudioTracks();
@@ -332,24 +306,26 @@
                         item.stop();
                     }
                 }
-
-                stop(this.cloneStream);
-                stop(this.myStream);
-                this.cloneStream = null;
-                this.myStream = null;
+                this.videoConn.close();
+                stop(this.cloneVideoStream);
+                stop(this.videoStream);
+                this.cloneVideoStream = null;
+                this.videoStream = null;
                 this.time = 0;
             },
+            desktopClose(){
+
+            },
             callBtn(business) {
-                // create an offer
-                console.log("createOffer   setLocalDescription")
-                this.yourConn.createOffer((offer) => {
+                let conn = this.getConn(business);
+                conn.createOffer((offer) => {
                     this.send({
                         business: business || "",
                         type: "offer",
                         offer: offer
                     });
                     try {
-                        this.yourConn.setLocalDescription(offer);
+                        conn.setLocalDescription(offer);
                     } catch (e) {
                         console.error(e)
                     }
@@ -358,65 +334,35 @@
                     alert("Error when creating an offer");
                 });
             },
+
             async initVidio() {
                 this.videoDialogVisible = true;
-                //**********************
-                //Starting a peer connection
-                //**********************
-                //getting local video stream
-                navigator.webkitGetUserMedia({video: true, audio: true}, (myStream) => {
-                    this.myStream = myStream;
-                    this.cloneStream = myStream.clone();
-                    this.cloneStream.removeTrack(this.cloneStream.getAudioTracks()[0]);
-                    //displaying local video stream on the page
-                    this.localVideoSrc = window.URL.createObjectURL(this.cloneStream);
-                    //using Google public stun server
-//                    var configuration = {
-////                         "iceServers": [{ "url": "stun:172.16.36.233:3478" }]
-//                         "iceServers": [{ "url": "stun:stun.xten.com" }]
-////                         "iceServers": [{ "url": "stun:stun.l.google.com:19302" }]
-//                    };
-                    var configuration = {
-//                        iceServers: [
-//                            {
-//                                urls: [
-//                                    "stun:stun.l.google.com:19302",
-//                                ]
-//                            },
-//                            {
-//                                urls: "turn:numb.viagenie.ca",
-//                                username: "zc1217zc@126.com",
-//                                credential: "fhqbukn"
-//                            }]
+                await new Promise((resolve,reject)=>{
+                    setTimeout(()=>{
+                        resolve();
+                    });
+                });
+                this.localVideo = document.getElementById("localVideo");
+                this.remoteVideo = document.getElementById("remoteVideo");
+                navigator.mediaDevices.getUserMedia({video: true, audio: true}).then((videoStream) => {
+                    this.videoStream = videoStream;
+                    this.cloneVideoStream = videoStream.clone();
+                    this.cloneVideoStream.removeTrack(this.cloneVideoStream.getAudioTracks()[0]);
+                    this.localVideo.srcObject = this.cloneVideoStream;
+                    let configuration = webRTCConfig.iceConf;
+                    this.videoConn = new webkitRTCPeerConnection(configuration);
+                    this.videoConn.ontrack = (e) => {
+                        this.remoteVideo.srcObject = e.streams[0];
                     };
-                    console.log(configuration)
-                    this.yourConn = new webkitRTCPeerConnection(configuration);
-                    // setup stream listening
-//                    console.log(this.targetReady)
-                    this.yourConn.ontrack = (e) => {
-                        console.log("onaddstream", e)
-                        this.remoteVideoSrc = window.URL.createObjectURL(e.streams[0]);
-                    };
-//                    if(this.targetReady){
-                    console.log("addTrack")
-//                        this.yourConn.addStream(myStream);
-                    myStream.getTracks().forEach(
+                    videoStream.getTracks().forEach(
                         (track) => {
-                            this.yourConn.addTrack(
+                            this.videoConn.addTrack(
                                 track,
-                                myStream
+                                videoStream
                             );
                         }
                     );
-//                    }
-                    //when a remote user adds stream to the peer connection, we display it
-//                    this.yourConn.onaddstream = (e) => {
-//                        console.log("onaddstream")
-//                        this.remoteVideoSrc = window.URL.createObjectURL(e.stream);
-//                    };
-                    // Setup ice handling
-                    this.yourConn.onicecandidate = (event) => {
-                        console.log("发送ICE候选");
+                    this.videoConn.onicecandidate = (event) => {
                         if (event.candidate !== null) {
                             this.send({
                                 type: "candidate",
@@ -431,60 +377,17 @@
                             targetId: this.targetId
                         })
                     }
-//                    this.socket.emit("videoReady",{
-//                        targetId:this.targetId
-//                    } )
                 }, function (error) {
-                    console.log(error);
+                    console.error(error);
                 });
             },
-//            initConnectionOld(){
-//
-//                this.desktopDialogVisible = true;
-//                //using Google public stun server
-//                var configuration = {
-////                                       "iceServers": [{ "url": "stun:stun2.1.google.com:19302" }]
-//                };
-//                this.yourConn = new webkitRTCPeerConnection(configuration);
-//                // setup stream listening
-////                                    this.desktopVideoSrc = window.URL.createObjectURL(returnedStream);
-//                this.yourConn.onaddstream = (e) => {
-//                    console.log("onaddstream")
-//                    this.desktopVideoSrc = window.URL.createObjectURL(e.stream);
-//                };
-//                // Setup ice handling
-//                this.yourConn.onicecandidate = (event) => {
-//                    console.log("onicecandidate")
-//                    if (event.candidate) {
-//                        this.send({
-//                            business: "desktop",
-//                            type: "candidate",
-//                            candidate: event.candidate
-//                        });
-//                    }
-//                };
-//                this.socket.emit("call",{
-//                    business: "desktop",
-//                    targetId:this.targetId
-//                })
-//            },
             initConnection() {
-                console.log("initConnection")
-                //using Google public stun server
-                var configuration = {
-                    "iceServers": [{"url": "stun:stun.xten.com"}]
+                let configuration = webRTCConfig.iceConf;
+                this.desktopConn = new webkitRTCPeerConnection(configuration);
+                this.desktopConn.onaddstream = (e) => {
+                    document.getElementById("desktopVideo").srcObject = e.stream;
                 };
-                this.yourConn = new webkitRTCPeerConnection(configuration);
-                // setup stream listening
-//                this.yourConn.addStream(returnedStream);
-//                                    this.desktopVideoSrc = window.URL.createObjectURL(returnedStream);
-                this.yourConn.onaddstream = (e) => {
-                    console.log("onaddstream")
-                    this.desktopVideoSrc = window.URL.createObjectURL(e.stream);
-                };
-                // Setup ice handling
-                this.yourConn.onicecandidate = (event) => {
-                    console.log("onicecandidate")
+                this.desktopConn.onicecandidate = (event) => {
                     if (event.candidate) {
                         this.send({
                             business: "desktop",
@@ -493,8 +396,6 @@
                         });
                     }
                 };
-
-//                this.callBtn("desktop");
             },
             async shareDesktopToRemote() {
                 this.initConnection();
@@ -518,23 +419,13 @@
             },
             initDesktop() {
                 let promise = new Promise((resovle, reject) => {
-
-                    let EXTENSION_ID;
-                    if (ENV === "production") {
-                        EXTENSION_ID = "fkgidgecgnhockejbpjcjhcofijdhebi";
-                    } else {
-                        EXTENSION_ID = "ebfmnilnhfcemoldogggfoicjhmjemfn";
-                    }
-                    console.log(EXTENSION_ID);
-                    chrome.runtime.sendMessage(EXTENSION_ID, 'version', response => {
+                    chrome.runtime.sendMessage(webRTCConfig.EXTENSION_ID, 'version', response => {
                         if (!response) {
                             console.log('No extension');
                             return;
                         }
-                        console.log('Extension version: ', response.version);
                         const request = {sources: ['window', 'screen', 'tab']};
-
-                        chrome.runtime.sendMessage(EXTENSION_ID, request, response => {
+                        chrome.runtime.sendMessage(webRTCConfig.EXTENSION_ID, request, response => {
                             if (response && response.type === 'success') {
                                 navigator.mediaDevices
                                     .getUserMedia({
@@ -546,7 +437,6 @@
                                         }
                                     })
                                     .then(returnedStream => {
-                                        console.log("getStream", returnedStream)
                                         resovle(returnedStream);
 
                                     })
@@ -569,32 +459,40 @@
                 }
                 this.socket.emit("m", JSON.stringify(message));
             },
-            handleOffer(offer, name) {
-                console.log("handleOffer createAnswer setLocalDescription ")
-                this.yourConn.setRemoteDescription(new RTCSessionDescription(offer));
-//                create an answer to an offer
-                this.yourConn.createAnswer((answer) => {
-                    this.yourConn.setLocalDescription(answer);
+            getConn(business){
+                let conn;
+                if(business === "desktop"){
+                    conn = this.desktopConn;
+                }else{
+                    conn = this.videoConn;
+                }
+                return conn;
+            },
+            handleOffer(data) {
+                let conn = this.getConn(data.business);
+                conn.setRemoteDescription(new RTCSessionDescription(data.offer));
+                conn.createAnswer((answer) => {
+                    conn.setLocalDescription(answer);
                     this.send({
                         type: "answer",
-                        answer: answer
+                        answer: answer,
+                        business:data.business
                     });
                 }, function (error) {
                     alert("Error when creating an answer");
                 });
             },
-            handleAnswer(answer) {
-                console.log("handleAnswer  setRemoteDescription")
-                this.yourConn.setRemoteDescription(new RTCSessionDescription(answer));
+            handleAnswer(data) {
+                let conn = this.getConn(data.business);
+                conn.setRemoteDescription(new RTCSessionDescription(data.answer));
             },
-            handleCandidate(candidate) {
-                console.log("handleCandidate   addIceCandidate")
+            handleCandidate(data) {
+                let conn = this.getConn(data.business);
                 try {
-                    this.yourConn.addIceCandidate(new RTCIceCandidate(candidate));
+                    conn.addIceCandidate(new RTCIceCandidate(data.candidate));
                 } catch (e) {
                     console.error(e)
                 }
-
             },
             changeRoom(item) {
                 let id = item.id;
@@ -606,14 +504,6 @@
                     this.allMsgList[id] = [];
                 }
             },
-//            async updateState(){
-//                let data = await this.$http.put("/user", {userId : this.userId, active:true}).catch((e)=>{
-//                    return false;
-//                });
-//                if(data){
-//                    this.users = data.body;
-//                }
-//            },
             async getUsers() {
                 let data = await this.$http.get("/user").catch((e) => {
                     return false;
